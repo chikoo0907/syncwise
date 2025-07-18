@@ -10,7 +10,7 @@ import {
 } from "react-icons/hi";
 import PendingProjects from "./PendingProjects";
 import TicketRaising from "./TicketRaising";
-import Inbox from "./Inbox";
+import Chat from "./Chat";
 import Deliverable from "./Deliverable";
 
 const sections = [

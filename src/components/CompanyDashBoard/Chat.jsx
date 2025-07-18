@@ -17,7 +17,7 @@ import {
   Clock
 } from 'lucide-react';
 
-export default function ClientChat() {
+export default function Chat() {
   const [clients, setClients] = useState([
     { 
       id: 1, 
