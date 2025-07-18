@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Eye, MousePointer, MessageSquare, Calendar, Users, Target, BarChart3 } from 'lucide-react';
 
-export default function Analytics() {
+export default function Deliverable() {
   const [animatedValues, setAnimatedValues] = useState([0, 0, 0]);
   const [selectedTimeframe, setSelectedTimeframe] = useState('7d');
   const [isLoading, setIsLoading] = useState(true);

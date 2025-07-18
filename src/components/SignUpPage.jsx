@@ -14,7 +14,6 @@ import { Separator } from "@/components/ui/separator";
 import { auth, db } from "@/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-import LoginPage from "@/components/LoginPage"
 import { useRouter } from "next/navigation";
 
 export default function SignupPage() {

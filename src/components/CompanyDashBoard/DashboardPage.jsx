@@ -8,34 +8,29 @@ import {
   HiOutlineMail,
   HiOutlineChartBar,
 } from "react-icons/hi";
-import EventForm from "./EventForm";
-import EventList from "./EventList";
-import ProfileSettings from "./ProfileSettings";
+import PendingProjects from "./PendingProjects";
+import TicketRaising from "./TicketRaising";
 import Inbox from "./Inbox";
-import Analytics from "./Analytics";
+import Deliverable from "./Deliverable";
 
 const sections = [
   {
-    key: "eventForm",
+    key: "Pending Projects",
     label: "Pending Projects",
     icon: <HiOutlinePlusCircle size={22} />,
   },
   {
-    key: "eventList",
-    label: "Manage My Events",
+    key: "Deliverable",
+    label: "Deliverable",
     icon: <HiOutlineClipboardList size={22} />,
   },
   {
-    key: "profile",
-    label: "Profile Settings",
+    key: "Ticket Raising",
+    label: "Ticket Raising",
     icon: <HiOutlineUserCircle size={22} />,
   },
   { key: "inbox", label: "Chat", icon: <HiOutlineMail size={22} /> },
-  {
-    key: "analytics",
-    label: "Analytics",
-    icon: <HiOutlineChartBar size={22} />,
-  },
+ 
 ];
 
 export default function Dashboard() {
@@ -43,16 +38,14 @@ export default function Dashboard() {
 
   const renderSection = () => {
     switch (activeSection) {
-      case "eventForm":
-        return <EventForm />;
-      case "eventList":
-        return <EventList />;
-      case "profile":
-        return <ProfileSettings />;
-      case "inbox":
-        return <Inbox />;
-      case "analytics":
-        return <Analytics />;
+      case "Pending Projects":
+        return <PendingProjects />;
+      case "Discoverable":
+        return <Discoverable />;
+      case "Ticket Raising":
+        return <TicketRaising />;
+      case "Chat":
+        return <Deliverable />;
       default:
         return null;
     }

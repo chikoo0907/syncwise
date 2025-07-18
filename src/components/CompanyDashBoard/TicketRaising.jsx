@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { format, parseISO, isBefore } from 'date-fns';
 
-export default function EventList() {
+export default function TicketRaising() {
   // State for events with more detailed data
   const [events, setEvents] = useState([
     { 
