@@ -1,4 +1,6 @@
+"use client"
 import React, { useState } from "react";
+
 
 const RaiseTicketForm = () => {
   const [formData, setFormData] = useState({
