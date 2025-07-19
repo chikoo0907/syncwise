@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { auth, db } from "@/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, updateDoc } from "firebase/firestore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -39,6 +39,62 @@ const getStatusColor = (status) => {
   }
 };
 
+const RAZORPAY_KEY_ID = "rzp_test_C9vmBupw0OBO3c";
+
+function loadRazorpayScript() {
+  return new Promise((resolve) => {
+    if (document.getElementById("razorpay-script")) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.id = "razorpay-script";
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
+async function handlePayment(row, fetchProjects) {
+  const loaded = await loadRazorpayScript();
+  if (!loaded) {
+    alert("Razorpay SDK failed to load. Are you online?");
+    return;
+  }
+
+  // You can customize amount, name, description, etc. as needed
+  const options = {
+    key: RAZORPAY_KEY_ID,
+    amount: (row.original.amount || 100) * 100, // Amount in paise (default 100 if not present)
+    currency: "INR",
+    name: "SyncWise Project Payment",
+    description: `Payment for project: ${row.original.name}`,
+    handler: async function (response) {
+      // Mark project as paid in Firestore
+      try {
+        await updateDoc(doc(db, "projects", row.original.id), {
+          paymentStatus: "paid",
+          paymentId: response.razorpay_payment_id,
+        });
+        alert("Payment successful!");
+        fetchProjects();
+      } catch (err) {
+        alert("Payment succeeded but failed to update status in database.");
+      }
+    },
+    prefill: {
+      name: row.original.clientName || "",
+      email: row.original.clientEmail || "",
+    },
+    theme: {
+      color: "#1e396b",
+    },
+  };
+  const paymentObject = new window.Razorpay(options);
+  paymentObject.open();
+}
+
 const ProjectsPage = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +104,7 @@ const ProjectsPage = () => {
 
   useEffect(() => {
     fetchProjects();
+    loadRazorpayScript(); // Preload script
   }, []);
 
   const fetchProjects = async () => {
@@ -119,16 +176,20 @@ const ProjectsPage = () => {
       {
         id: "payment",
         header: "Payment",
-        cell: ({ row }) => (
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={row.original.status !== "completed"}
-            className="w-full"
-          >
-            Payment
-          </Button>
-        ),
+        cell: ({ row }) => {
+          const isPaid = row.original.paymentStatus === "paid";
+          return (
+            <Button
+              variant={isPaid ? "secondary" : "outline"}
+              size="sm"
+              disabled={row.original.status !== "completed" || isPaid}
+              className="w-full"
+              onClick={() => handlePayment(row, fetchProjects)}
+            >
+              {isPaid ? "Paid" : "Pay Now"}
+            </Button>
+          );
+        },
       },
     ],
     []

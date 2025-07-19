@@ -75,10 +75,14 @@ export default function ManageProjects() {
         );
 
         const projectsSnapshot = await getDocs(projectsQuery);
-        const projectsList = projectsSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const projectsList = projectsSnapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            paymentStatus: data.paymentStatus || "unpaid",
+          };
+        });
 
         // Sort locally instead of in query
         projectsList.sort((a, b) => {
@@ -201,22 +205,22 @@ export default function ManageProjects() {
       {
         accessorKey: "clientName",
         header: "Client Name",
-        cell: (info) => info.getValue(),
+        cell: (info) => info.getValue() || "-",
       },
       {
         accessorKey: "name",
         header: "Project Name",
-        cell: (info) => info.getValue(),
+        cell: (info) => info.getValue() || "-",
       },
       {
         accessorKey: "startDate",
         header: "Start Date",
-        cell: (info) => new Date(info.getValue()).toLocaleDateString(),
+        cell: (info) => info.getValue() ? new Date(info.getValue()).toLocaleDateString() : "-",
       },
       {
         accessorKey: "endDate",
         header: "End Date",
-        cell: (info) => new Date(info.getValue()).toLocaleDateString(),
+        cell: (info) => info.getValue() ? new Date(info.getValue()).toLocaleDateString() : "-",
       },
       {
         accessorKey: "status",
@@ -229,6 +233,19 @@ export default function ManageProjects() {
             }
           >
             {info.getValue()}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "paymentStatus",
+        header: "Payment Status",
+        cell: (info) => (
+          <span className={
+            info.getValue() === "paid"
+              ? "text-green-600 font-semibold"
+              : "text-red-600 font-semibold"
+          }>
+            {info.getValue() === "paid" ? "Paid" : "Unpaid"}
           </span>
         ),
       },
@@ -281,7 +298,7 @@ export default function ManageProjects() {
         ),
       },
     ],
-    [projects]
+    []
   );
 
   // Table instance
