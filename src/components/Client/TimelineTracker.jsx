@@ -15,6 +15,7 @@ import {
   Target
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import ProjectDeliverablePDF from '../ProjectDeliverablePDF';
 
 export default function TimelineTracker() {
   const [timelines, setTimelines] = useState([]);
@@ -231,23 +232,33 @@ export default function TimelineTracker() {
             </div>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {projects.map((project) => (
-                <Card key={project.id} className="hover:shadow-lg transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-lg">{project.name}</h4>
-                      <Badge className={getStatusColor(project.status)}>
-                        {project.status}
-                      </Badge>
-                    </div>
-                    <p className="text-gray-600 text-sm mb-2">{project.description}</p>
-                    <div className="text-xs text-gray-500">
-                      <div>Start: {new Date(project.startDate).toLocaleDateString()}</div>
-                      <div>End: {new Date(project.endDate).toLocaleDateString()}</div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              {projects.map((project) => {
+                const isCompleted = project.completedAt || project.status === 'completed' || project.status === 'delivered';
+                return (
+                  <Card key={project.id} className="hover:shadow-lg transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-lg">{project.name}</h4>
+                        <Badge className={getStatusColor(project.status)}>
+                          {project.status}
+                        </Badge>
+                      </div>
+                      <p className="text-gray-600 text-sm mb-2">{project.description}</p>
+                      <div className="text-xs text-gray-500">
+                        <div>Start: {new Date(project.startDate).toLocaleDateString()}</div>
+                        <div>End: {new Date(project.endDate).toLocaleDateString()}</div>
+                      </div>
+                      {/* Show PDF download if project is completed */}
+                      {isCompleted && (
+                        <div className="mt-4">
+                          <div className="mb-2 font-semibold text-green-700">Project Completed! Download your deliverable summary:</div>
+                          <ProjectDeliverablePDF projectId={project.id} />
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </CardContent>
