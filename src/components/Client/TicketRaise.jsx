@@ -216,7 +216,7 @@ export default function TicketRaise() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Support Tickets</h2>
+          <h2 className="text-2xl font-bold text-gray-800">Raise Tickets</h2>
           {/* <p className="text-gray-600 mt-1">
             Submit and track your support requests
           </p> */}
@@ -227,7 +227,7 @@ export default function TicketRaise() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {stats.map((stat, idx) => {
           const Icon = stat.icon;
           return (
@@ -254,7 +254,7 @@ export default function TicketRaise() {
             </div>
           );
         })}
-      </div>
+      </div> */}
 
       {/* Raise New Ticket */}
       <Card className="border-0 shadow-lg ">

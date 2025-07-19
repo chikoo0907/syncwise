@@ -1,10 +1,10 @@
-"use client"
-import React from 'react';
+"use client";
+import React from "react";
 import SignUpPage from "@/components/SignUpPage";
 
 const SignUp = () => {
   return (
-    <div style={{ padding: '20px' }}>
+    <div>
       <SignUpPage />
     </div>
   );

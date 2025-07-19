@@ -1,6 +1,5 @@
 "use client";
-
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { auth, db } from "@/firebase";
 import {
   collection,
@@ -14,7 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Clock, Calendar, Target, Plus, FileText } from "lucide-react";
 import {
   Table,
@@ -32,6 +30,7 @@ import {
   flexRender,
 } from "@tanstack/react-table";
 import { useMemo } from "react";
+import TimelineActionDialog from "@/components/CompanyDashBoard/DeliverableDialog";
 
 export default function Timeline() {
   const [projects, setProjects] = useState([]);
@@ -73,11 +72,13 @@ export default function Timeline() {
           collection(db, "timelines"),
           where("companyName", "==", companyData.companyName)
         );
+
         const timelinesSnapshot = await getDocs(timelinesQuery);
         const timelinesList = timelinesSnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
+
         // Sort by createdAt descending
         timelinesList.sort((a, b) => {
           const dateA =
@@ -86,6 +87,7 @@ export default function Timeline() {
             b.createdAt?.toDate?.() || new Date(b.createdAt) || new Date(0);
           return dateB - dateA;
         });
+
         setTimelines(timelinesList);
       }
     } catch (error) {
@@ -100,20 +102,24 @@ export default function Timeline() {
     try {
       const user = auth.currentUser;
       if (!user) return;
+
       const companyDoc = await getDocs(collection(db, "companies"));
       const companyData = companyDoc.docs
         .find((doc) => doc.id === user.uid)
         ?.data();
+
       if (companyData) {
         const projectsQuery = query(
           collection(db, "projects"),
           where("companyName", "==", companyData.companyName)
         );
+
         const projectsSnapshot = await getDocs(projectsQuery);
         const projectsList = projectsSnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
+
         setProjects(projectsList);
       }
     } catch (error) {
@@ -163,6 +169,7 @@ export default function Timeline() {
       await updateDoc(doc(db, "timelines", timelineId), {
         status: newStatus,
       });
+
       setTimelines((timelines) =>
         timelines.map((tl) =>
           tl.id === timelineId ? { ...tl, status: newStatus } : tl
@@ -172,6 +179,15 @@ export default function Timeline() {
       console.error("Error updating timeline status:", error);
       alert("Failed to update status");
     }
+  };
+
+  // Handle timeline summary update
+  const handleTimelineUpdate = (timelineId, summary) => {
+    setTimelines((prev) =>
+      prev.map((tl) =>
+        tl.id === timelineId ? { ...tl, timelineSummary: summary } : tl
+      )
+    );
   };
 
   // Replace getPriorityColor with getStatusColor
@@ -278,6 +294,16 @@ export default function Timeline() {
         ),
       },
       {
+        id: "action",
+        header: "Action",
+        cell: ({ row }) => (
+          <TimelineActionDialog
+            timeline={row.original}
+            onUpdate={handleTimelineUpdate}
+          />
+        ),
+      },
+      {
         id: "updateStatus",
         header: "Update Status",
         cell: ({ row }) => (
@@ -364,7 +390,6 @@ export default function Timeline() {
                   <Icon className="w-6 h-6 text-white" />
                 </div>
               </div>
-
               <div className="space-y-2">
                 <div
                   className={`text-3xl font-bold ${stat.textColor} group-hover:scale-105 transition-transform duration-200`}
@@ -572,6 +597,7 @@ export default function Timeline() {
                   {timelines.length} timeline items
                 </div>
               </div>
+
               <div className="rounded-md border border-[#a3c5e0] bg-white overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -615,6 +641,7 @@ export default function Timeline() {
                   </TableBody>
                 </Table>
               </div>
+
               <div className="flex items-center justify-end space-x-2 py-4">
                 <Button
                   variant="outline"

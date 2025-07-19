@@ -28,11 +28,11 @@ const sections = [
     label: "Timeline",
     icon: <HiOutlineChartBar size={22} />,
   },
-  // {
-  //   key: "Updates",
-  //   label: "Updates",
-  //   icon: <HiOutlineBell size={22} />,
-  // },
+  {
+    key: "My Projects",
+    label: "Projects",
+    icon: <HiOutlineBell size={22} />,
+  },
   {
     key: "Chat",
     label: "Chat",
@@ -61,7 +61,7 @@ export default function ClientDashboardPage() {
       case "Timeline":
         return <TimelineTracker />;
       case "Updates":
-        return <UpdatesPage />;
+        return <ProjectsPage />;
       case "Chat":
         return <ClientCompanyChat />;
       default:

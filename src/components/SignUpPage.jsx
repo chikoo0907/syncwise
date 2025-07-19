@@ -59,7 +59,11 @@ export default function SignupPage() {
         displayName = form.clientName;
       }
       // Create user in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, email, form.password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        form.password
+      );
       const user = userCredential.user;
       // Store user info in Firestore
       if (userType === "company") {
@@ -108,15 +112,15 @@ export default function SignupPage() {
   return (
     <div className="h-screen w-full flex items-stretch bg-gray-50 p-10 gap-8">
       {/* Left Card: Image */}
-      <div className="flex-1 flex items-center justify-center bg-[#e6f4fa] rounded-3xl">
+      <div className="flex bg-[#e6f4fa] rounded-3xl w-5/12">
         <img
-          src="/your-image.png"
+          src="/bg2.jpg"
           alt="Decorative"
-          className="w-2/3 max-w-lg object-contain"
+          className=" object-fill w-full  rounded-3xl"
         />
       </div>
       {/* Right Card: Signup */}
-      <div className="flex-1 flex items-center justify-center w-full">
+      <div className=" flex-1 flex items-center justify-center">
         <Card className="flex-1 h-full flex flex-col justify-center rounded-3xl shadow-lg">
           <CardHeader className="text-center">
             <CardTitle className="text-3xl font-bold">SyncWise</CardTitle>
@@ -236,7 +240,9 @@ export default function SignupPage() {
                 </>
               )}
               {error && (
-                <div className="text-red-500 text-sm w-[400px] text-center">{error}</div>
+                <div className="text-red-500 text-sm w-[400px] text-center">
+                  {error}
+                </div>
               )}
               <Button
                 className="w-[400px] h-12 rounded-3xl bg-[#00B2E2]"
