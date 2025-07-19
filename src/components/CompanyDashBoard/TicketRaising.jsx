@@ -31,9 +31,12 @@ export default function TicketRaising() {
   const [companyName, setCompanyName] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [projectFilter, setProjectFilter] = useState("all");
+  const [projects, setProjects] = useState([]);
 
   useEffect(() => {
     fetchTickets();
+    fetchProjects();
   }, []);
 
   const fetchTickets = async () => {
@@ -81,6 +84,31 @@ export default function TicketRaising() {
     }
   };
 
+  const fetchProjects = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      const companyDoc = await getDocs(collection(db, "companies"));
+      const companyData = companyDoc.docs
+        .find((doc) => doc.id === user.uid)
+        ?.data();
+      if (companyData) {
+        const projectsQuery = query(
+          collection(db, "projects"),
+          where("companyName", "==", companyData.companyName)
+        );
+        const projectsSnapshot = await getDocs(projectsQuery);
+        const projectsList = projectsSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setProjects(projectsList);
+      }
+    } catch (error) {
+      // ignore
+    }
+  };
+
   const updateTicketStatus = async (ticketId, newStatus) => {
     try {
       await updateDoc(doc(db, "tickets", ticketId), {
@@ -111,9 +139,8 @@ export default function TicketRaising() {
       case "in-progress":
         return "bg-yellow-100 text-yellow-800";
       case "resolved":
-        return "bg-green-100 text-green-800";
       case "closed":
-        return "bg-gray-100 text-gray-800";
+        return "bg-green-100 text-green-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -126,9 +153,8 @@ export default function TicketRaising() {
       case "in-progress":
         return <Clock className="w-5 h-5 text-yellow-600" />;
       case "resolved":
-        return <CheckCircle className="w-5 h-5 text-green-600" />;
       case "closed":
-        return <MessageSquare className="w-5 h-5 text-gray-600" />;
+        return <CheckCircle className="w-5 h-5 text-green-600" />;
       default:
         return <MessageSquare className="w-5 h-5 text-gray-600" />;
     }
@@ -153,7 +179,9 @@ export default function TicketRaising() {
   const inProgressTickets = tickets.filter(
     (t) => t.status === "in-progress"
   ).length;
-  const resolvedTickets = tickets.filter((t) => t.status === "resolved").length;
+  const resolvedTickets = tickets.filter(
+    (t) => t.status === "resolved" || t.status === "closed"
+  ).length;
 
   const stats = [
     {
@@ -181,7 +209,7 @@ export default function TicketRaising() {
       textColor: "text-yellow-600",
     },
     {
-      label: "Resolved",
+      label: "Resolved/Closed",
       value: resolvedTickets,
       icon: CheckCircle,
       color: "from-green-500 to-emerald-500",
@@ -197,8 +225,13 @@ export default function TicketRaising() {
       ticket.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       ticket.clientName?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus =
-      statusFilter === "all" || ticket.status === statusFilter;
-    return matchesSearch && matchesStatus;
+      statusFilter === "all" ||
+      (statusFilter === "resolved_closed"
+        ? ticket.status === "resolved" || ticket.status === "closed"
+        : ticket.status === statusFilter);
+    const matchesProject =
+      projectFilter === "all" || ticket.projectId === projectFilter;
+    return matchesSearch && matchesStatus && matchesProject;
   });
 
   if (loading) {
@@ -285,8 +318,19 @@ export default function TicketRaising() {
               <option value="all">All Status</option>
               <option value="open">Open</option>
               <option value="in-progress">In Progress</option>
-              <option value="resolved">Resolved</option>
-              <option value="closed">Closed</option>
+              <option value="resolved_closed">Resolved/Closed</option>
+            </select>
+            <select
+              value={projectFilter}
+              onChange={(e) => setProjectFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">All Projects</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -311,7 +355,11 @@ export default function TicketRaising() {
                             {ticket.title}
                           </h3>
                           <Badge className={getStatusColor(ticket.status)}>
-                            {ticket.status}
+                            {ticket.status === "resolved" ||
+                            ticket.status === "closed"
+                              ? "Resolved/Closed"
+                              : ticket.status.charAt(0).toUpperCase() +
+                                ticket.status.slice(1)}
                           </Badge>
                           <Badge className={getPriorityColor(ticket.priority)}>
                             {ticket.priority}
@@ -331,20 +379,40 @@ export default function TicketRaising() {
                               {ticket.createdAt?.toDate().toLocaleDateString()}
                             </span>
                           </div>
+                          <div className="flex items-center gap-1">
+                            <Badge className="bg-blue-50 text-blue-700 border-blue-200">
+                              {ticket.projectName || "No Project"}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Badge className="bg-purple-50 text-purple-700 border-purple-200">
+                              {ticket.category || "No Category"}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
                       <div className="flex flex-col gap-2">
                         <select
-                          value={ticket.status}
-                          onChange={(e) =>
-                            updateTicketStatus(ticket.id, e.target.value)
+                          value={
+                            ticket.status === "resolved" ||
+                            ticket.status === "closed"
+                              ? "resolved_closed"
+                              : ticket.status
                           }
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            updateTicketStatus(
+                              ticket.id,
+                              val === "resolved_closed" ? "resolved" : val
+                            );
+                          }}
                           className="p-2 border border-gray-300 rounded text-sm"
                         >
                           <option value="open">Open</option>
                           <option value="in-progress">In Progress</option>
-                          <option value="resolved">Resolved</option>
-                          <option value="closed">Closed</option>
+                          <option value="resolved_closed">
+                            Resolved/Closed
+                          </option>
                         </select>
                       </div>
                     </div>

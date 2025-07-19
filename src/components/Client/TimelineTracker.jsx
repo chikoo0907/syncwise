@@ -30,6 +30,7 @@ import {
   getCoreRowModel,
   flexRender,
 } from "@tanstack/react-table";
+import ProjectDeliverablePDF from "../ProjectDeliverablePDF";
 
 export default function TimelineTracker() {
   const [timelines, setTimelines] = useState([]);
@@ -322,68 +323,53 @@ export default function TimelineTracker() {
               <p>No projects found. Contact your company to get started!</p>
             </div>
           ) : (
-            <>
-              <div className="mb-6">
-                <label className="block text-sm font-medium mb-2">
-                  Select Project
-                </label>
-                <select
-                  value={selectedProject?.id || ""}
-                  onChange={(e) => {
-                    const project = projects.find(
-                      (p) => p.id === e.target.value
-                    );
-                    setSelectedProject(project || null);
-                  }}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">-- Select a Project --</option>
-                  {projects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {selectedProject && (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {projects.map((project) => {
+                const isCompleted =
+                  project.completedAt ||
+                  project.status === "completed" ||
+                  project.status === "delivered";
+                return (
                   <Card
-                    key={selectedProject.id}
-                    className={`hover:shadow-lg transition-shadow border-2 border-blue-400`}
+                    key={project.id}
+                    className="hover:shadow-lg transition-shadow"
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="font-semibold text-lg">
-                          {selectedProject.name}
+                          {project.name}
                         </h4>
-                        <Badge
-                          className={getStatusColor(selectedProject.status)}
-                        >
-                          {selectedProject.status}
+                        <Badge className={getStatusColor(project.status)}>
+                          {project.status}
                         </Badge>
                       </div>
                       <p className="text-gray-600 text-sm mb-2">
-                        {selectedProject.description}
+                        {project.description}
                       </p>
                       <div className="text-xs text-gray-500">
                         <div>
                           Start:{" "}
-                          {new Date(
-                            selectedProject.startDate
-                          ).toLocaleDateString()}
+                          {new Date(project.startDate).toLocaleDateString()}
                         </div>
                         <div>
-                          End:{" "}
-                          {new Date(
-                            selectedProject.endDate
-                          ).toLocaleDateString()}
+                          End: {new Date(project.endDate).toLocaleDateString()}
                         </div>
                       </div>
+                      {/* Show PDF download if project is completed */}
+                      {isCompleted && (
+                        <div className="mt-4">
+                          <div className="mb-2 font-semibold text-green-700">
+                            Project Completed! Download your deliverable
+                            summary:
+                          </div>
+                          <ProjectDeliverablePDF projectId={project.id} />
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
-                </div>
-              )}
-            </>
+                );
+              })}
+            </div>
           )}
         </CardContent>
       </Card>
