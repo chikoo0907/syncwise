@@ -14,7 +14,7 @@ import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import TicketRaise from "./TicketRaise";
 import TimelineTracker from "./TimelineTracker";
-import UpdatesPage from "./UpdatesPage";
+import ProjectsPage from "./ProjectsPage";
 import ClientCompanyChat from "./ClientCompanyChat";
 
 const sections = [
@@ -29,7 +29,7 @@ const sections = [
     icon: <HiOutlineChartBar size={22} />,
   },
   {
-    key: "My Projects",
+    key: "MyProjects",
     label: "Projects",
     icon: <HiOutlineBell size={22} />,
   },
@@ -60,7 +60,7 @@ export default function ClientDashboardPage() {
         return <TicketRaise />;
       case "Timeline":
         return <TimelineTracker />;
-      case "Updates":
+      case "MyProjects":
         return <ProjectsPage />;
       case "Chat":
         return <ClientCompanyChat />;

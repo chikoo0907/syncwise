@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { auth, db } from "@/firebase";
 import {
   collection,
@@ -25,6 +25,21 @@ import {
   Plus,
   FileText,
 } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  flexRender,
+} from "@tanstack/react-table";
 
 export default function TicketRaise() {
   const [tickets, setTickets] = useState([]);
@@ -38,6 +53,9 @@ export default function TicketRaise() {
     description: "",
     priority: "medium",
   });
+  const [filter, setFilter] = useState("");
+  const [pageIndex, setPageIndex] = useState(0);
+  const pageSize = 5;
 
   useEffect(() => {
     fetchClientAndTickets();
@@ -203,6 +221,96 @@ export default function TicketRaise() {
       textColor: "text-green-600",
     },
   ];
+
+  // Table columns
+  const columns = useMemo(
+    () => [
+      {
+        accessorKey: "subject",
+        header: "Subject",
+        cell: (info) => info.getValue() || "-",
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        cell: (info) => (
+          <span
+            className={`inline-flex items-center gap-1 px-2 py-1 rounded-xl text-xs font-medium border ${getStatusColor(
+              info.getValue()
+            )}`}
+          >
+            {getStatusIcon(info.getValue())}
+            <span className="ml-1 capitalize">{info.getValue()}</span>
+          </span>
+        ),
+      },
+      {
+        accessorKey: "priority",
+        header: "Priority",
+        cell: (info) => (
+          <span
+            className={`inline-flex items-center gap-1 px-2 py-1 rounded-xl text-xs font-medium border ${getPriorityColor(
+              info.getValue()
+            )}`}
+          >
+            {info.getValue()} Priority
+          </span>
+        ),
+      },
+      {
+        accessorKey: "description",
+        header: "Description",
+        cell: (info) => info.getValue() || "-",
+      },
+      {
+        accessorKey: "createdAt",
+        header: "Created At",
+        cell: (info) => {
+          const val = info.getValue();
+          return (
+            val?.toDate?.()?.toLocaleDateString() ||
+            new Date(val).toLocaleDateString()
+          );
+        },
+      },
+      {
+        accessorKey: "category",
+        header: "Category",
+        cell: (info) => (
+          <span className="capitalize text-gray-500">{info.getValue()}</span>
+        ),
+      },
+    ],
+    []
+  );
+
+  // Filtering
+  const filteredTickets = useMemo(() => {
+    return tickets.filter((ticket) => {
+      const f = filter.toLowerCase();
+      return (
+        ticket.subject?.toLowerCase().includes(f) ||
+        ticket.description?.toLowerCase().includes(f) ||
+        ticket.category?.toLowerCase().includes(f)
+      );
+    });
+  }, [tickets, filter]);
+
+  // Pagination
+  const paginatedTickets = useMemo(() => {
+    const start = pageIndex * pageSize;
+    return filteredTickets.slice(start, start + pageSize);
+  }, [filteredTickets, pageIndex]);
+
+  // Table instance
+  const table = useReactTable({
+    data: paginatedTickets,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    // Filtering and pagination handled manually above
+  });
+
+  const pageCount = Math.ceil(filteredTickets.length / pageSize);
 
   if (loading) {
     return (
@@ -373,6 +481,20 @@ export default function TicketRaise() {
         <h3 className="text-lg font-semibold mb-4 text-gray-800">
           Your Tickets
         </h3>
+        <div className="mb-4 flex items-center justify-between">
+          <Input
+            placeholder="Filter by subject, description, or category..."
+            value={filter}
+            onChange={(e) => {
+              setFilter(e.target.value);
+              setPageIndex(0);
+            }}
+            className="max-w-xs"
+          />
+          <div className="text-sm text-gray-500">
+            Showing {filteredTickets.length} tickets
+          </div>
+        </div>
         {tickets.length === 0 ? (
           <Card className="border-0 shadow-lg ">
             <CardContent className="p-8">
@@ -388,53 +510,75 @@ export default function TicketRaise() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
-            {tickets.map((ticket) => (
-              <Card
-                key={ticket.id}
-                className="border-0 shadow-lg hover:shadow-xl transition-all duration-200"
+          <>
+            <div className="overflow-x-auto rounded-md border border-[#a3c5e0] bg-white">
+              <Table>
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id} className="text-center">
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.length ? (
+                    table.getRowModel().rows.map((row) => (
+                      <TableRow key={row.id}>
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id} className="text-center">
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length}
+                        className="h-24 text-center"
+                      >
+                        No results.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            {/* Pagination Controls */}
+            <div className="flex items-center justify-end space-x-2 py-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+                disabled={pageIndex === 0}
               >
-                <CardContent className="px-6 ">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h4 className="font-semibold text-lg text-gray-800">
-                          {ticket.subject}
-                        </h4>
-                        <Badge
-                          className={`${getStatusColor(ticket.status)} border`}
-                        >
-                          {getStatusIcon(ticket.status)}
-                          <span className="ml-1 capitalize">
-                            {ticket.status}
-                          </span>
-                        </Badge>
-                        <Badge
-                          className={`${getPriorityColor(
-                            ticket.priority
-                          )} border`}
-                        >
-                          {ticket.priority} Priority
-                        </Badge>
-                      </div>
-                      <p className="text-gray-600 mb-3">{ticket.description}</p>
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          {ticket.createdAt?.toDate?.()?.toLocaleDateString() ||
-                            new Date(ticket.createdAt).toLocaleDateString()}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <User className="w-4 h-4" />
-                          {ticket.category}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                Previous
+              </Button>
+              <span className="text-sm px-2">
+                Page {pageIndex + 1} of {pageCount}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setPageIndex((p) => Math.min(pageCount - 1, p + 1))
+                }
+                disabled={pageIndex >= pageCount - 1}
+              >
+                Next
+              </Button>
+            </div>
+          </>
         )}
       </div>
     </div>

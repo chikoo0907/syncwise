@@ -420,12 +420,15 @@ export default function TimelineTracker() {
           ) : (
             <>
               {/* PDF Download Button */}
-              {selectedProject && selectedProject.status === "completed" && (
+              {/* {selectedProject && selectedProject.status === "completed" && (
                 <FinalDeliverablePdf
                   projectName={selectedProject.name}
+                  companyName={selectedProject.companyName}
+                  clientName={selectedProject.clientName}
                   timelineItems={filteredTimelines}
+                  projectSummary={selectedProject.projectSummary}
                 />
-              )}
+              )} */}
               <div className="rounded-md border border-[#a3c5e0] bg-white overflow-x-auto">
                 <Table>
                   <TableHeader>

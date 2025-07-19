@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { auth, db } from "@/firebase";
 import {
   collection,
@@ -24,6 +24,20 @@ import {
   Calendar,
   Search,
 } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useMemo, useState } from "react";
+import {
+  useReactTable,
+  getCoreRowModel,
+  flexRender,
+} from "@tanstack/react-table";
 
 export default function TicketRaising() {
   const [tickets, setTickets] = useState([]);
@@ -234,6 +248,109 @@ export default function TicketRaising() {
     return matchesSearch && matchesStatus && matchesProject;
   });
 
+  // Pagination
+  const [pageIndex, setPageIndex] = useState(0);
+  const pageSize = 5;
+  const pageCount = Math.ceil(filteredTickets.length / pageSize);
+  const paginatedTickets = useMemo(() => {
+    const start = pageIndex * pageSize;
+    return filteredTickets.slice(start, start + pageSize);
+  }, [filteredTickets, pageIndex]);
+
+  // Table columns
+  const columns = useMemo(
+    () => [
+      {
+        accessorKey: "subject",
+        header: "Title",
+        cell: (info) => info.getValue() || "-",
+      },
+      {
+        accessorKey: "description",
+        header: "Description",
+        cell: (info) => info.getValue() || "-",
+      },
+
+      {
+        accessorKey: "clientName",
+        header: "Client Name",
+        cell: (info) => info.getValue() || "-",
+      },
+
+      {
+        id: "category",
+        header: "Category",
+        cell: ({ row }) => (
+          <Badge className="bg-purple-50 text-purple-700 border-purple-200">
+            {row.original.category || "No Category"}
+          </Badge>
+        ),
+      },
+      {
+        id: "priority",
+        header: "Priority",
+        cell: ({ row }) => (
+          <Badge className={getPriorityColor(row.original.priority)}>
+            {row.original.priority}
+          </Badge>
+        ),
+      },
+      {
+        id: "status",
+        header: "Status",
+        cell: ({ row }) => (
+          <span
+            className={`inline-flex items-center gap-1 px-2 py-1 rounded-xl text-xs font-medium border ${getStatusColor(
+              row.original.status
+            )}`}
+          >
+            {/* {getStatusIcon(row.original.status)} */}
+            <span className="ml-1 capitalize">
+              {row.original.status === "resolved" ||
+              row.original.status === "closed"
+                ? "Resolved/Closed"
+                : row.original.status.charAt(0).toUpperCase() +
+                  row.original.status.slice(1)}
+            </span>
+          </span>
+        ),
+      },
+      {
+        id: "updateStatus",
+        header: "Update Status",
+        cell: ({ row }) => (
+          <select
+            value={
+              row.original.status === "resolved" ||
+              row.original.status === "closed"
+                ? "resolved_closed"
+                : row.original.status
+            }
+            onChange={(e) => {
+              const val = e.target.value;
+              updateTicketStatus(
+                row.original.id,
+                val === "resolved_closed" ? "resolved" : val
+              );
+            }}
+            className="p-2 border border-gray-300 rounded text-sm"
+          >
+            <option value="open">Open</option>
+            <option value="in-progress">In Progress</option>
+            <option value="resolved_closed">Resolved/Closed</option>
+          </select>
+        ),
+      },
+    ],
+    [tickets]
+  );
+
+  const table = useReactTable({
+    data: paginatedTickets,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -340,86 +457,75 @@ export default function TicketRaising() {
               <p>No tickets found.</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {filteredTickets.map((ticket) => (
-                <Card
-                  key={ticket.id}
-                  className="hover:shadow-lg transition-shadow"
-                >
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          {getStatusIcon(ticket.status)}
-                          <h3 className="text-lg font-semibold">
-                            {ticket.title}
-                          </h3>
-                          <Badge className={getStatusColor(ticket.status)}>
-                            {ticket.status === "resolved" ||
-                            ticket.status === "closed"
-                              ? "Resolved/Closed"
-                              : ticket.status.charAt(0).toUpperCase() +
-                                ticket.status.slice(1)}
-                          </Badge>
-                          <Badge className={getPriorityColor(ticket.priority)}>
-                            {ticket.priority}
-                          </Badge>
-                        </div>
-                        <p className="text-gray-600 mb-3">
-                          {ticket.description}
-                        </p>
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
-                          <div className="flex items-center gap-1">
-                            <User className="w-4 h-4" />
-                            <span>{ticket.clientName}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            <span>
-                              {ticket.createdAt?.toDate().toLocaleDateString()}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Badge className="bg-blue-50 text-blue-700 border-blue-200">
-                              {ticket.projectName || "No Project"}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Badge className="bg-purple-50 text-purple-700 border-purple-200">
-                              {ticket.category || "No Category"}
-                            </Badge>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <select
-                          value={
-                            ticket.status === "resolved" ||
-                            ticket.status === "closed"
-                              ? "resolved_closed"
-                              : ticket.status
-                          }
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            updateTicketStatus(
-                              ticket.id,
-                              val === "resolved_closed" ? "resolved" : val
-                            );
-                          }}
-                          className="p-2 border border-gray-300 rounded text-sm"
+            <>
+              <div className="overflow-x-auto rounded-md border border-[#a3c5e0] bg-white">
+                <Table>
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead key={header.id} className="text-center">
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                          </TableHead>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows.length ? (
+                      table.getRowModel().rows.map((row) => (
+                        <TableRow key={row.id}>
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id} className="text-center">
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={columns.length}
+                          className="h-24 text-center"
                         >
-                          <option value="open">Open</option>
-                          <option value="in-progress">In Progress</option>
-                          <option value="resolved_closed">
-                            Resolved/Closed
-                          </option>
-                        </select>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                          No results.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              {/* Pagination Controls */}
+              <div className="flex items-center justify-end space-x-2 py-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+                  disabled={pageIndex === 0}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm px-2">
+                  Page {pageIndex + 1} of {pageCount}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPageIndex((p) => Math.min(pageCount - 1, p + 1))
+                  }
+                  disabled={pageIndex >= pageCount - 1}
+                >
+                  Next
+                </Button>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
