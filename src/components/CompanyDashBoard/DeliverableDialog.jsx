@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Upload } from "lucide-react";
 import PropTypes from "prop-types";
 
-export default function TimelineActionDialog({ timeline, onUpdate }) {
+export default function TimelineActionDialog({ timeline, onUpdate, readOnly = false }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [timelineSummary, setTimelineSummary] = useState(
     timeline?.timelineSummary || ""
@@ -74,8 +74,9 @@ export default function TimelineActionDialog({ timeline, onUpdate }) {
             <Textarea
               placeholder="Enter timeline summary, deliverable link, or any notes about the completed timeline item..."
               value={timelineSummary}
-              onChange={(e) => setTimelineSummary(e.target.value)}
+              onChange={readOnly ? undefined : (e) => setTimelineSummary(e.target.value)}
               className="min-h-[100px]"
+              readOnly={readOnly}
             />
           </div>
           <DialogFooter>
@@ -86,13 +87,15 @@ export default function TimelineActionDialog({ timeline, onUpdate }) {
             >
               Cancel
             </Button>
-            <Button
-              onClick={saveTimelineSummary}
-              disabled={savingSummary}
-              className="bg-[#00B2E2] hover:bg-[#0099CC]"
-            >
-              {savingSummary ? "Saving..." : "Save"}
-            </Button>
+            {!readOnly && (
+              <Button
+                onClick={saveTimelineSummary}
+                disabled={savingSummary}
+                className="bg-[#00B2E2] hover:bg-[#0099CC]"
+              >
+                {savingSummary ? "Saving..." : "Save"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -103,4 +106,5 @@ export default function TimelineActionDialog({ timeline, onUpdate }) {
 TimelineActionDialog.propTypes = {
   timeline: PropTypes.any,
   onUpdate: PropTypes.func.isRequired,
+  readOnly: PropTypes.bool,
 };

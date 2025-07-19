@@ -43,7 +43,6 @@ export default function Timeline() {
     description: "",
     startDate: "",
     dueDate: "",
-    priority: "medium",
   });
   const [projectFilter, setProjectFilter] = useState("");
   const [timelines, setTimelines] = useState([]);
@@ -133,7 +132,10 @@ export default function Timeline() {
       if (!selectedProject) return;
 
       const timelineData = {
-        ...newTimeline,
+        title: newTimeline.title,
+        description: newTimeline.description,
+        startDate: newTimeline.startDate,
+        dueDate: newTimeline.dueDate,
         projectId: selectedProject.id,
         projectName: selectedProject.name,
         companyName: companyName,
@@ -151,7 +153,6 @@ export default function Timeline() {
         description: "",
         startDate: "",
         dueDate: "",
-        priority: "medium",
       });
       setShowAddTimeline(false);
       setSelectedProject(null);
@@ -519,25 +520,6 @@ export default function Timeline() {
                         required
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">
-                        Priority
-                      </label>
-                      <select
-                        value={newTimeline.priority}
-                        onChange={(e) =>
-                          setNewTimeline({
-                            ...newTimeline,
-                            priority: e.target.value,
-                          })
-                        }
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                      </select>
-                    </div>
                   </div>
 
                   <div className="flex space-x-3">
@@ -558,7 +540,6 @@ export default function Timeline() {
                           description: "",
                           startDate: "",
                           dueDate: "",
-                          priority: "medium",
                         });
                       }}
                     >

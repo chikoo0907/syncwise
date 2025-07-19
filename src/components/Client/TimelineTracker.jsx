@@ -30,7 +30,8 @@ import {
   getCoreRowModel,
   flexRender,
 } from "@tanstack/react-table";
-import TimelinePdf from "./TimelinePdf";
+import FinalDeliverablePdf from "./TimelinePdf";
+import TimelineActionDialog from "@/components/CompanyDashBoard/DeliverableDialog";
 
 export default function TimelineTracker() {
   const [timelines, setTimelines] = useState([]);
@@ -41,6 +42,13 @@ export default function TimelineTracker() {
   const [selectedProject, setSelectedProject] = useState(null);
 
   // Table columns for timeline items
+  const handleTimelineUpdate = (timelineId, summary) => {
+    setTimelines((prev) =>
+      prev.map((tl) =>
+        tl.id === timelineId ? { ...tl, timelineSummary: summary } : tl
+      )
+    );
+  };
   const columns = useMemo(
     () => [
       {
@@ -52,19 +60,6 @@ export default function TimelineTracker() {
         accessorKey: "projectName",
         header: "Project Name",
         cell: (info) => info.getValue() || "-",
-      },
-      {
-        accessorKey: "priority",
-        header: "Priority",
-        cell: (info) => (
-          <span
-            className={`capitalize px-2 py-1 rounded text-xs font-medium ${getPriorityColor(
-              info.getValue()
-            )}`}
-          >
-            {info.getValue() || "-"}
-          </span>
-        ),
       },
       {
         accessorKey: "status",
@@ -94,6 +89,17 @@ export default function TimelineTracker() {
           info.getValue()
             ? new Date(info.getValue()).toLocaleDateString()
             : "-",
+      },
+      {
+        id: "action",
+        header: "Action",
+        cell: ({ row }) => (
+          <TimelineActionDialog
+            timeline={row.original}
+            onUpdate={handleTimelineUpdate}
+            readOnly={true}
+          />
+        ),
       },
     ],
     []
@@ -414,10 +420,12 @@ export default function TimelineTracker() {
           ) : (
             <>
               {/* PDF Download Button */}
-              <TimelinePdf
-                projectName={selectedProject.name}
-                timelineItems={filteredTimelines}
-              />
+              {selectedProject && selectedProject.status === "completed" && (
+                <FinalDeliverablePdf
+                  projectName={selectedProject.name}
+                  timelineItems={filteredTimelines}
+                />
+              )}
               <div className="rounded-md border border-[#a3c5e0] bg-white overflow-x-auto">
                 <Table>
                   <TableHeader>

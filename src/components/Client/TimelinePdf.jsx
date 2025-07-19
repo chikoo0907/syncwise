@@ -7,14 +7,14 @@ import autoTable from "jspdf-autotable";
  * - projectName: string
  * - timelineItems: array of { title, description, startDate, dueDate, status }
  */
-const TimelinePdf = ({ projectName, timelineItems }) => {
+const FinalDeliverablePdf = ({ projectName, timelineItems }) => {
   const handleDownload = () => {
     const doc = new jsPDF();
     doc.setFontSize(16);
-    doc.text(`Project Timeline Summary`, 14, 16);
+    doc.text(`Final Deliverable PDF`, 14, 16);
     doc.setFontSize(12);
     doc.text(`Project Name: ${projectName || "-"}`, 14, 26);
-    doc.text(`Deliverable Summary`, 14, 36);
+    doc.text(`Final Deliverable Summary`, 14, 36);
 
     // Table columns
     const columns = [
@@ -48,8 +48,8 @@ const TimelinePdf = ({ projectName, timelineItems }) => {
 
     doc.save(
       `${
-        projectName ? projectName.replace(/\s+/g, "_") : "timeline"
-      }_summary.pdf`
+        projectName ? projectName.replace(/\s+/g, "_") : "final_deliverable"
+      }_final_deliverable.pdf`
     );
   };
 
@@ -58,9 +58,9 @@ const TimelinePdf = ({ projectName, timelineItems }) => {
       onClick={handleDownload}
       className="mb-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
     >
-      Download Timeline Summary (PDF)
+      Download Final Deliverable PDF
     </button>
   );
 };
 
-export default TimelinePdf;
+export default FinalDeliverablePdf;
