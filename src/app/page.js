@@ -27,7 +27,10 @@ export default function Home() {
       {/* Header/Navbar */}
       <header className="bg-gray-900 text-white py-4 relative z-10">
         <div className="container mx-auto flex justify-between items-center px-4">
+          <div className="flex items-center">  
+          <img src="/logo.png" alt="SyncWise Logo" className="h-15 w-auto mr-3" />
           <h1 className="text-2xl font-bold">SyncWise</h1>
+          </div>
           <nav className="space-x-4 hidden md:block"></nav>
           {!isLoggedIn ? (
             <div className="space-x-2">

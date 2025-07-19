@@ -451,6 +451,11 @@ export default function Timeline() {
                   onSubmit={addTimeline}
                   className="space-y-4 p-4 border rounded-lg"
                 >
+                  {selectedProject.status === "completed" && (
+                    <div className="text-red-600 font-semibold mb-2">
+                      Timeline cannot be added for a completed project.
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium mb-1">
                       Timeline Title
@@ -465,6 +470,7 @@ export default function Timeline() {
                       }
                       placeholder="Enter timeline item title"
                       required
+                      disabled={selectedProject.status === "completed"}
                     />
                   </div>
 
@@ -484,6 +490,7 @@ export default function Timeline() {
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       rows="3"
                       required
+                      disabled={selectedProject.status === "completed"}
                     />
                   </div>
 
@@ -502,6 +509,7 @@ export default function Timeline() {
                           })
                         }
                         required
+                        disabled={selectedProject.status === "completed"}
                       />
                     </div>
                     <div>
@@ -518,6 +526,7 @@ export default function Timeline() {
                           })
                         }
                         required
+                        disabled={selectedProject.status === "completed"}
                       />
                     </div>
                   </div>
@@ -526,6 +535,7 @@ export default function Timeline() {
                     <Button
                       type="submit"
                       className="bg-green-600 hover:bg-green-700"
+                      disabled={selectedProject.status === "completed"}
                     >
                       Add Timeline Item
                     </Button>

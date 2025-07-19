@@ -74,12 +74,11 @@ export default function Dashboard() {
     <div className="flex min-h-screen bg-gray-50">
       <aside className="w-80 bg-[#a3c5e0] shadow-2xl shadow-[#496c9c]  p-8 flex flex-col justify-between sticky top-0 h-screen rounded-br-4xl rounded-tr-4xl">
         <div>
-          <div className="flex items-center gap-3 mb-10">
-            <span className="inline-block bg-[#e6f4fa] rounded-2xl p-3">
-              <HiOutlineUserCircle size={36} className="text-[#00B2E2]" />
+          <div className="flex flex-col items-center gap-3 mb-10">
+            <span className="inline-block bg-[#e6f4fa] rounded-2xl w-20">
+            <img src="/logo.png" />
             </span>
             <div>
-              <span className="text-2xl font-bold text-gray-800">SyncWise</span>
               <p className="text-sm text-gray-500">Company Panel</p>
             </div>
           </div>
