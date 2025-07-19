@@ -32,19 +32,15 @@ export default function TicketRaise() {
   const [clientName, setClientName] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [projects, setProjects] = useState([]);
   const [newTicket, setNewTicket] = useState({
     subject: "",
     category: "",
     description: "",
     priority: "medium",
-    projectId: "",
-    projectName: "",
   });
 
   useEffect(() => {
     fetchClientAndTickets();
-    fetchProjects();
   }, []);
 
   const fetchClientAndTickets = async () => {
@@ -85,34 +81,12 @@ export default function TicketRaise() {
     }
   };
 
-  const fetchProjects = async () => {
-    try {
-      const user = auth.currentUser;
-      if (!user) return;
-      const projectsQuery = query(
-        collection(db, "projects"),
-        where("clientId", "==", user.uid)
-      );
-      const projectsSnapshot = await getDocs(projectsQuery);
-      const projectsList = projectsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setProjects(projectsList);
-    } catch (error) {
-      // ignore
-    }
-  };
-
   const handleSubmitTicket = async (e) => {
     e.preventDefault();
     try {
       const user = auth.currentUser;
       if (!user) return;
-      if (!newTicket.projectId) {
-        alert("Please select a project for this ticket.");
-        return;
-      }
+
       const ticketData = {
         ...newTicket,
         clientId: user.uid,
@@ -121,21 +95,22 @@ export default function TicketRaise() {
         status: "open",
         createdAt: new Date(),
         updatedAt: new Date(),
-        projectId: newTicket.projectId,
-        projectName: newTicket.projectName,
       };
+
       await addDoc(collection(db, "tickets"), ticketData);
+
       // Reset form
       setNewTicket({
         subject: "",
         category: "",
         description: "",
         priority: "medium",
-        projectId: "",
-        projectName: "",
       });
       setShowForm(false);
+
+      // Refresh tickets list
       fetchClientAndTickets();
+
       alert("Ticket submitted successfully!");
     } catch (error) {
       console.error("Error submitting ticket:", error);
@@ -150,8 +125,9 @@ export default function TicketRaise() {
       case "in-progress":
         return "bg-yellow-50 text-yellow-700 border-yellow-200";
       case "resolved":
-      case "closed":
         return "bg-green-50 text-green-700 border-green-200";
+      case "closed":
+        return "bg-gray-50 text-gray-700 border-gray-200";
       default:
         return "bg-gray-50 text-gray-700 border-gray-200";
     }
@@ -164,8 +140,9 @@ export default function TicketRaise() {
       case "in-progress":
         return <Clock className="w-5 h-5 text-yellow-600" />;
       case "resolved":
-      case "closed":
         return <CheckCircle className="w-5 h-5 text-green-600" />;
+      case "closed":
+        return <MessageSquare className="w-5 h-5 text-gray-600" />;
       default:
         return <MessageSquare className="w-5 h-5 text-gray-600" />;
     }
@@ -218,7 +195,7 @@ export default function TicketRaise() {
       textColor: "text-yellow-600",
     },
     {
-      label: "Resolved/Closed",
+      label: "Resolved",
       value: resolvedTickets,
       icon: CheckCircle,
       color: "from-green-500 to-emerald-500",
@@ -299,34 +276,6 @@ export default function TicketRaise() {
               onSubmit={handleSubmitTicket}
               className="space-y-6 p-6 border border-gray-100 rounded-3xl bg-gray-50"
             >
-              {/* Project selection */}
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">
-                  Project
-                </label>
-                <select
-                  value={newTicket.projectId}
-                  onChange={(e) => {
-                    const selected = projects.find(
-                      (p) => p.id === e.target.value
-                    );
-                    setNewTicket((nt) => ({
-                      ...nt,
-                      projectId: e.target.value,
-                      projectName: selected ? selected.name : "",
-                    }));
-                  }}
-                  className="w-full p-4 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#00B2E2] focus:border-[#00B2E2] bg-white"
-                  required
-                >
-                  <option value="">-- Select Project --</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
               <div>
                 <label className="block text-sm font-medium mb-2 text-gray-700">
                   Subject
@@ -457,11 +406,7 @@ export default function TicketRaise() {
                         >
                           {getStatusIcon(ticket.status)}
                           <span className="ml-1 capitalize">
-                            {ticket.status === "resolved" ||
-                            ticket.status === "closed"
-                              ? "Resolved/Closed"
-                              : ticket.status.charAt(0).toUpperCase() +
-                                ticket.status.slice(1)}
+                            {ticket.status}
                           </span>
                         </Badge>
                         <Badge
@@ -471,12 +416,6 @@ export default function TicketRaise() {
                         >
                           {ticket.priority} Priority
                         </Badge>
-                      </div>
-                      <div className="text-xs text-blue-700 font-semibold mb-1">
-                        Project: {ticket.projectName || "N/A"}
-                      </div>
-                      <div className="text-xs text-purple-700 font-semibold mb-1">
-                        Category: {ticket.category || "N/A"}
                       </div>
                       <p className="text-gray-600 mb-3">{ticket.description}</p>
                       <div className="flex items-center gap-4 text-sm text-gray-500">

@@ -30,7 +30,7 @@ import {
   getCoreRowModel,
   flexRender,
 } from "@tanstack/react-table";
-import ProjectDeliverablePDF from "../ProjectDeliverablePDF";
+import TimelinePdf from "./TimelinePdf";
 
 export default function TimelineTracker() {
   const [timelines, setTimelines] = useState([]);
@@ -53,7 +53,6 @@ export default function TimelineTracker() {
         header: "Project Name",
         cell: (info) => info.getValue() || "-",
       },
-
       {
         accessorKey: "priority",
         header: "Priority",
@@ -80,7 +79,14 @@ export default function TimelineTracker() {
           </span>
         ),
       },
-
+      {
+        accessorKey: "startDate",
+        header: "Start Date",
+        cell: (info) =>
+          info.getValue()
+            ? new Date(info.getValue()).toLocaleDateString()
+            : "-",
+      },
       {
         accessorKey: "dueDate",
         header: "Due Date",
@@ -204,6 +210,19 @@ export default function TimelineTracker() {
     }
   };
 
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case "high":
+        return "bg-red-100 text-red-800";
+      case "medium":
+        return "bg-yellow-100 text-yellow-800";
+      case "low":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
   // Calculate statistics
   const totalTimelines = timelines.length;
   const pendingTimelines = timelines.filter(
@@ -310,53 +329,68 @@ export default function TimelineTracker() {
               <p>No projects found. Contact your company to get started!</p>
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {projects.map((project) => {
-                const isCompleted =
-                  project.completedAt ||
-                  project.status === "completed" ||
-                  project.status === "delivered";
-                return (
+            <>
+              <div className="mb-6">
+                <label className="block text-sm font-medium mb-2">
+                  Select Project
+                </label>
+                <select
+                  value={selectedProject?.id || ""}
+                  onChange={(e) => {
+                    const project = projects.find(
+                      (p) => p.id === e.target.value
+                    );
+                    setSelectedProject(project || null);
+                  }}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">-- Select a Project --</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {selectedProject && (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   <Card
-                    key={project.id}
-                    className="hover:shadow-lg transition-shadow"
+                    key={selectedProject.id}
+                    className={`hover:shadow-lg transition-shadow border-2 border-blue-400`}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="font-semibold text-lg">
-                          {project.name}
+                          {selectedProject.name}
                         </h4>
-                        <Badge className={getStatusColor(project.status)}>
-                          {project.status}
+                        <Badge
+                          className={getStatusColor(selectedProject.status)}
+                        >
+                          {selectedProject.status}
                         </Badge>
                       </div>
                       <p className="text-gray-600 text-sm mb-2">
-                        {project.description}
+                        {selectedProject.description}
                       </p>
                       <div className="text-xs text-gray-500">
                         <div>
                           Start:{" "}
-                          {new Date(project.startDate).toLocaleDateString()}
+                          {new Date(
+                            selectedProject.startDate
+                          ).toLocaleDateString()}
                         </div>
                         <div>
-                          End: {new Date(project.endDate).toLocaleDateString()}
+                          End:{" "}
+                          {new Date(
+                            selectedProject.endDate
+                          ).toLocaleDateString()}
                         </div>
                       </div>
-                      {/* Show PDF download if project is completed */}
-                      {isCompleted && (
-                        <div className="mt-4">
-                          <div className="mb-2 font-semibold text-green-700">
-                            Project Completed! Download your deliverable
-                            summary:
-                          </div>
-                          <ProjectDeliverablePDF projectId={project.id} />
-                        </div>
-                      )}
                     </CardContent>
                   </Card>
-                );
-              })}
-            </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -378,93 +412,56 @@ export default function TimelineTracker() {
               <p>No timeline items found for this project.</p>
             </div>
           ) : (
-            <div className="rounded-md border border-[#a3c5e0] bg-white overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <TableHead key={header.id} className="text-center">
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {table.getRowModel().rows.length ? (
-                    table.getRowModel().rows.map((row) => (
-                      <TableRow key={row.id}>
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id} className="text-center">
+            <>
+              {/* PDF Download Button */}
+              <TimelinePdf
+                projectName={selectedProject.name}
+                timelineItems={filteredTimelines}
+              />
+              <div className="rounded-md border border-[#a3c5e0] bg-white overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <TableHead key={header.id} className="text-center">
                             {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
+                              header.column.columnDef.header,
+                              header.getContext()
                             )}
-                          </TableCell>
+                          </TableHead>
                         ))}
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={columns.length}
-                        className="h-24 text-center"
-                      >
-                        No results.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            <div className="space-y-4">
-              {timelines.map((timeline) => (
-                <Card key={timeline.id} className="hover:shadow-lg transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          {getStatusIcon(timeline.status)}
-                          <h3 className="text-lg font-semibold">{timeline.title}</h3>
-                          <Badge className={getStatusColor(timeline.status)}>
-                            {timeline.status}
-                          </Badge>
-                        </div>
-                        <p className="text-gray-600 mb-3">{timeline.description}</p>
-                        <div className="grid grid-cols-2 gap-4 text-sm text-gray-500">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            <span>Start: {timeline.startDate ? new Date(timeline.startDate).toLocaleDateString() : 'N/A'}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            <span>End: {timeline.endDate ? new Date(timeline.endDate).toLocaleDateString() : 'N/A'}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <FileText className="w-4 h-4" />
-                            <span>Project: {timeline.projectName}</span>
-                          </div>
-                        </div>
-                      </div>
-                      {timeline.fileUrl && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(timeline.fileUrl, '_blank')}
-                          className="text-blue-600 hover:text-blue-800"
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows.length ? (
+                      table.getRowModel().rows.map((row) => (
+                        <TableRow key={row.id}>
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id} className="text-center">
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell
+                          colSpan={columns.length}
+                          className="h-24 text-center"
                         >
-                          <Download className="w-4 h-4 mr-2" />
-                          Download
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                          No results.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
