@@ -120,19 +120,6 @@ export default function TimelineTracker() {
     }
   };
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case "high":
-        return "bg-red-100 text-red-800";
-      case "medium":
-        return "bg-yellow-100 text-yellow-800";
-      case "low":
-        return "bg-green-100 text-green-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
   // Calculate statistics
   const totalTimelines = timelines.length;
   const pendingTimelines = timelines.filter(d => d.status === "pending").length;
@@ -288,15 +275,16 @@ export default function TimelineTracker() {
                           <Badge className={getStatusColor(timeline.status)}>
                             {timeline.status}
                           </Badge>
-                          <Badge className={getPriorityColor(timeline.priority)}>
-                            {timeline.priority}
-                          </Badge>
                         </div>
                         <p className="text-gray-600 mb-3">{timeline.description}</p>
                         <div className="grid grid-cols-2 gap-4 text-sm text-gray-500">
                           <div className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
-                            <span>Due: {new Date(timeline.dueDate).toLocaleDateString()}</span>
+                            <span>Start: {timeline.startDate ? new Date(timeline.startDate).toLocaleDateString() : 'N/A'}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            <span>End: {timeline.endDate ? new Date(timeline.endDate).toLocaleDateString() : 'N/A'}</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <FileText className="w-4 h-4" />
