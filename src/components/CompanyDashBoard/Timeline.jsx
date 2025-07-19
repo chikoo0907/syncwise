@@ -42,8 +42,8 @@ export default function Timeline() {
   const [newTimeline, setNewTimeline] = useState({
     title: "",
     description: "",
-    dueDate: "",
-    priority: "medium",
+    startDate: "",
+    endDate: ""
   });
   const [projectFilter, setProjectFilter] = useState("");
   const [timelines, setTimelines] = useState([]);
@@ -126,7 +126,10 @@ export default function Timeline() {
       if (!selectedProject) return;
 
       const timelineData = {
-        ...newTimeline,
+        title: newTimeline.title,
+        description: newTimeline.description,
+        startDate: newTimeline.startDate,
+        endDate: newTimeline.endDate,
         projectId: selectedProject.id,
         projectName: selectedProject.name,
         companyName: companyName,
@@ -142,8 +145,8 @@ export default function Timeline() {
       setNewTimeline({
         title: "",
         description: "",
-        dueDate: "",
-        priority: "medium",
+        startDate: "",
+        endDate: ""
       });
       setShowAddTimeline(false);
       setSelectedProject(null);
@@ -453,39 +456,22 @@ export default function Timeline() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-1">
-                        Due Date
-                      </label>
+                      <label className="block text-sm font-medium mb-1">Start Date</label>
                       <Input
                         type="date"
-                        value={newTimeline.dueDate}
-                        onChange={(e) =>
-                          setNewTimeline({
-                            ...newTimeline,
-                            dueDate: e.target.value,
-                          })
-                        }
+                        value={newTimeline.startDate}
+                        onChange={(e) => setNewTimeline({...newTimeline, startDate: e.target.value})}
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">
-                        Priority
-                      </label>
-                      <select
-                        value={newTimeline.priority}
-                        onChange={(e) =>
-                          setNewTimeline({
-                            ...newTimeline,
-                            priority: e.target.value,
-                          })
-                        }
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                      </select>
+                      <label className="block text-sm font-medium mb-1">End Date</label>
+                      <Input
+                        type="date"
+                        value={newTimeline.endDate}
+                        onChange={(e) => setNewTimeline({...newTimeline, endDate: e.target.value})}
+                        required
+                      />
                     </div>
                   </div>
 
@@ -505,8 +491,8 @@ export default function Timeline() {
                         setNewTimeline({
                           title: "",
                           description: "",
-                          dueDate: "",
-                          priority: "medium",
+                          startDate: "",
+                          endDate: ""
                         });
                       }}
                     >
@@ -611,6 +597,23 @@ export default function Timeline() {
                 </Button>
               </div>
             </>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {projects.map((project) => (
+                <Card key={project.id} className="hover:shadow-lg transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold text-lg">{project.name}</h4>
+                    </div>
+                    <p className="text-gray-600 text-sm mb-2">{project.description}</p>
+                    <div className="text-xs text-gray-500">
+                      <div>Client: {project.clientName}</div>
+                      <div>Start: {new Date(project.startDate).toLocaleDateString()}</div>
+                      <div>End: {new Date(project.endDate).toLocaleDateString()}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>

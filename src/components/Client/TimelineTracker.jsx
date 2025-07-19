@@ -204,19 +204,6 @@ export default function TimelineTracker() {
     }
   };
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case "high":
-        return "bg-red-100 text-red-800";
-      case "medium":
-        return "bg-yellow-100 text-yellow-800";
-      case "low":
-        return "bg-green-100 text-green-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
   // Calculate statistics
   const totalTimelines = timelines.length;
   const pendingTimelines = timelines.filter(
@@ -433,6 +420,50 @@ export default function TimelineTracker() {
                   )}
                 </TableBody>
               </Table>
+            <div className="space-y-4">
+              {timelines.map((timeline) => (
+                <Card key={timeline.id} className="hover:shadow-lg transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          {getStatusIcon(timeline.status)}
+                          <h3 className="text-lg font-semibold">{timeline.title}</h3>
+                          <Badge className={getStatusColor(timeline.status)}>
+                            {timeline.status}
+                          </Badge>
+                        </div>
+                        <p className="text-gray-600 mb-3">{timeline.description}</p>
+                        <div className="grid grid-cols-2 gap-4 text-sm text-gray-500">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            <span>Start: {timeline.startDate ? new Date(timeline.startDate).toLocaleDateString() : 'N/A'}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            <span>End: {timeline.endDate ? new Date(timeline.endDate).toLocaleDateString() : 'N/A'}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <FileText className="w-4 h-4" />
+                            <span>Project: {timeline.projectName}</span>
+                          </div>
+                        </div>
+                      </div>
+                      {timeline.fileUrl && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(timeline.fileUrl, '_blank')}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Download
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </CardContent>
