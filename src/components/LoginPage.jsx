@@ -69,9 +69,9 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center w-full">
         <Card className="flex-1 h-full flex flex-col justify-center  rounded-3xl shadow-lg">
           <CardHeader className="text-center">
-            <CardTitle className="text-3xl font-bold">SyncWise</CardTitle>
+            <CardTitle className="text-3xl font-bold">ProjectiaCore</CardTitle>
             <CardDescription className="text-lg">
-              Welcome to SyncWise
+              Welcome to ProjectiaCore
             </CardDescription>
           </CardHeader>
 

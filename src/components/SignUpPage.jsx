@@ -123,9 +123,9 @@ export default function SignupPage() {
       <div className=" flex-1 flex items-center justify-center">
         <Card className="flex-1 h-full flex flex-col justify-center rounded-3xl shadow-lg">
           <CardHeader className="text-center">
-            <CardTitle className="text-3xl font-bold">SyncWise</CardTitle>
+            <CardTitle className="text-3xl font-bold">ProjectiaCore</CardTitle>
             <CardDescription className="text-lg">
-              Create your SyncWise account
+              Create your ProjectiaCore account
             </CardDescription>
           </CardHeader>
 

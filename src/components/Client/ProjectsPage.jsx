@@ -69,7 +69,7 @@ async function handlePayment(row, fetchProjects) {
     key: RAZORPAY_KEY_ID,
     amount: (row.original.amount || 100) * 100, // Amount in paise (default 100 if not present)
     currency: "INR",
-    name: "SyncWise Project Payment",
+    name: "ProjectiaCore Project Payment",
     description: `Payment for project: ${row.original.name}`,
     handler: async function (response) {
       // Mark project as paid in Firestore
