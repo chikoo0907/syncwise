@@ -101,7 +101,7 @@ export default function Chat() {
           initialMessages[client.id] = [
             {
               id: 1,
-              text: "Welcome to SyncWise! How can we help you today?",
+              text: "Welcome to ProjectiaCore! How can we help you today?",
               sender: "company",
               time: "Just now",
               read: true,
@@ -179,7 +179,7 @@ export default function Chat() {
                 [clientId]: [
                   {
                     id: "welcome",
-                    text: "Welcome to SyncWise! How can we help you today?",
+                    text: "Welcome to ProjectiaCore! How can we help you today?",
                     sender: "company",
                     timestamp: Date.now(),
                     time: new Date().toLocaleTimeString(),

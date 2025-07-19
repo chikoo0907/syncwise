@@ -156,7 +156,7 @@ export default function ClientCompanyChat() {
               setMessages([
                 {
                   id: "welcome",
-                  text: "Welcome to SyncWise! How can we help you today?",
+                  text: "Welcome to ProjectiaCore! How can we help you today?",
                   sender: "company",
                   timestamp: Date.now(),
                   time: new Date().toLocaleTimeString(),

@@ -136,7 +136,7 @@ export default function Dashboard() {
             Logout
           </button>
           <div className="text-xs text-gray-400 text-center">
-            &copy; {new Date().getFullYear()} SyncWise. All rights reserved.
+            &copy; {new Date().getFullYear()} ProjectiaCore. All rights reserved.
           </div>
         </div>
       </aside>
