@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import FinalDeliverablePdf from "./TimelinePdf";
+import ReceiptPdf from "./ReceiptPdf";
 import {
   useReactTable,
   getCoreRowModel,
@@ -93,6 +94,25 @@ async function handlePayment(row, fetchProjects) {
   };
   const paymentObject = new window.Razorpay(options);
   paymentObject.open();
+}
+
+function downloadReceipt(project) {
+  // You can replace this with PDF generation logic if needed
+  const receiptContent = `
+    Receipt for Project: ${project.name}
+    Project ID: ${project.id}
+    Amount Paid: ₹${project.amount || 100}
+    Payment ID: ${project.paymentId || "N/A"}
+    Status: ${project.paymentStatus}
+    Date: ${new Date().toLocaleString()}
+  `;
+  const blob = new Blob([receiptContent], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Receipt_${project.name || project.id}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 const ProjectsPage = () => {
@@ -187,6 +207,27 @@ const ProjectsPage = () => {
               onClick={() => handlePayment(row, fetchProjects)}
             >
               {isPaid ? "Paid" : "Pay Now"}
+            </Button>
+          );
+        },
+      },
+      {
+        id: "receipt",
+        header: "Download Receipt",
+        cell: ({ row }) => {
+          const isPaid = row.original.paymentStatus === "paid";
+          return isPaid ? (
+            <div className="w-full flex justify-center">
+              <ReceiptPdf project={row.original} />
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              disabled
+            >
+              Download Receipt
             </Button>
           );
         },
