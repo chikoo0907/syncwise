@@ -1,7 +1,15 @@
 "use client";
 
 import React, { useState } from "react";
-import { HiOutlineClipboardList, HiOutlineUserCircle, HiOutlineMail, HiOutlineChartBar, HiOutlineBell, HiOutlineUsers, HiOutlineLogout } from "react-icons/hi";
+import {
+  HiOutlineClipboardList,
+  HiOutlineUserCircle,
+  HiOutlineMail,
+  HiOutlineChartBar,
+  HiOutlineBell,
+  HiOutlineUsers,
+  HiOutlineLogout,
+} from "react-icons/hi";
 import { auth } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
@@ -12,10 +20,22 @@ import TicketRaising from "./TicketRaising";
 import Chat from "./Chat";
 
 const sections = [
-  { key: "Client Management", label: "Client Management", icon: <HiOutlineUsers size={22} /> },
-  { key: "Manage Projects", label: "Manage Projects", icon: <HiOutlineClipboardList size={22} /> },
+  {
+    key: "Client Management",
+    label: "Client Management",
+    icon: <HiOutlineUsers size={22} />,
+  },
+  {
+    key: "Manage Projects",
+    label: "Manage Projects",
+    icon: <HiOutlineClipboardList size={22} />,
+  },
   { key: "Timeline", label: "Timeline", icon: <HiOutlineChartBar size={22} /> },
-  { key: "Ticket Raising", label: "Ticket Raising", icon: <HiOutlineBell size={22} /> },
+  {
+    key: "Ticket Raising",
+    label: "Ticket Raising",
+    icon: <HiOutlineBell size={22} />,
+  },
   { key: "Chat", label: "Chat", icon: <HiOutlineMail size={22} /> },
 ];
 
@@ -52,24 +72,22 @@ export default function Dashboard() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <aside className="w-80 bg-white shadow-lg border-r border-gray-100 p-8 flex flex-col justify-between sticky top-0 h-screen">
+      <aside className="w-80 bg-[#a3c5e0] shadow-2xl shadow-[#496c9c]  p-8 flex flex-col justify-between sticky top-0 h-screen rounded-br-4xl rounded-tr-4xl">
         <div>
           <div className="flex items-center gap-3 mb-10">
             <span className="inline-block bg-[#e6f4fa] rounded-2xl p-3">
               <HiOutlineUserCircle size={36} className="text-[#00B2E2]" />
             </span>
             <div>
-              <span className="text-2xl font-bold text-gray-800">
-                SyncWise
-              </span>
+              <span className="text-2xl font-bold text-gray-800">SyncWise</span>
               <p className="text-sm text-gray-500">Company Panel</p>
             </div>
           </div>
-          <nav className="flex flex-col gap-3">
+          <nav className="flex flex-col gap-6">
             {sections.map((section) => (
               <button
                 key={section.key}
-                className={`flex items-center gap-3 px-6 py-4 rounded-2xl transition-all duration-200 font-medium text-lg focus:outline-none focus:ring-2 focus:ring-[#00B2E2] focus:ring-opacity-50
+                className={`flex items-center gap-3 px-6 py-2 rounded-2xl transition-all duration-200 font-medium text-lg focus:outline-none focus:ring-2 focus:ring-[#00B2E2] focus:ring-opacity-50
                   ${
                     activeSection === section.key
                       ? "bg-[#00B2E2] text-white shadow-lg transform scale-105"
@@ -86,7 +104,7 @@ export default function Dashboard() {
         <div className="space-y-4">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl transition-all duration-200 font-medium text-lg bg-red-50 hover:bg-red-100 text-red-600 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-50"
+            className="w-1/2 flex items-center justify-center gap-3 px-2 py-2 rounded-2xl transition-all duration-200 font-medium text-md bg-red-50 hover:bg-red-100 text-red-600 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-50"
           >
             <HiOutlineLogout size={22} />
             Logout
@@ -96,15 +114,17 @@ export default function Dashboard() {
           </div>
         </div>
       </aside>
-      <main className="flex-1 p-8 lg:p-12">
-        <div className="max-w-6xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">{activeSection}</h1>
-            <p className="text-gray-600">Manage your {activeSection.toLowerCase()} efficiently</p>
-          </div>
-          <div className="bg-white rounded-3xl shadow-lg p-8">
-            {renderSection()}
-          </div>
+      <main className="flex-1 px-8 lg:p-12">
+        <div className="max-w-6xl mx-auto ">
+          {/* <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">
+              {activeSection}
+            </h1>
+            <p className="text-gray-600">
+              Manage your {activeSection.toLowerCase()} efficiently
+            </p>
+          </div> */}
+          <div className=" rounded-lg shadow-lg p-8 ">{renderSection()}</div>
         </div>
       </main>
     </div>

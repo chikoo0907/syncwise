@@ -1,27 +1,35 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import { auth, realtimeDb, db, testRealtimeConnection } from "@/firebase";
-import { ref, push, onValue, off } from "firebase/database";
-import { collection, query, where, getDocs, addDoc, onSnapshot } from "firebase/firestore";
+import { ref, push, onValue, off, update } from "firebase/database";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  addDoc,
+  onSnapshot,
+  updateDoc,
+} from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  MessageSquare, 
+import {
+  MessageSquare,
   Send,
   User,
   Calendar,
   Building,
   Clock,
   AlertCircle,
-  RefreshCw
-} from 'lucide-react';
+  RefreshCw,
+} from "lucide-react";
 
 export default function ClientCompanyChat() {
   const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [clientName, setClientName] = useState("");
   const [companyName, setCompanyName] = useState("");
@@ -39,7 +47,7 @@ export default function ClientCompanyChat() {
     if (user) {
       setupMessageListener(user.uid);
     }
-    
+
     return () => {
       if (user) {
         off(ref(realtimeDb, `chats/${user.uid}`));
@@ -54,8 +62,10 @@ export default function ClientCompanyChat() {
 
       // Get client data from clients collection
       const clientDoc = await getDocs(collection(db, "clients"));
-      const clientData = clientDoc.docs.find(doc => doc.id === user.uid)?.data();
-      
+      const clientData = clientDoc.docs
+        .find((doc) => doc.id === user.uid)
+        ?.data();
+
       if (clientData) {
         setClientName(clientData.clientName);
         setCompanyName(clientData.companyName);
@@ -81,11 +91,13 @@ export default function ClientCompanyChat() {
       }
     } catch (error) {
       console.error("Connection test failed:", error);
-      if (error.code === 'PERMISSION_DENIED') {
+      if (error.code === "PERMISSION_DENIED") {
         setConnectionStatus("Permission denied - using Firestore");
         setUseFirestore(true);
         // Show alert with instructions
-        alert("Firebase Realtime Database permission denied. Please update your database rules. Using Firestore as fallback.");
+        alert(
+          "Firebase Realtime Database permission denied. Please update your database rules. Using Firestore as fallback."
+        );
       } else {
         setConnectionStatus("Connection failed");
         setUseFirestore(true);
@@ -101,47 +113,69 @@ export default function ClientCompanyChat() {
     // Try Realtime Database first
     try {
       const messagesRef = ref(realtimeDb, `chats/${clientId}`);
-      
-      onValue(messagesRef, (snapshot) => {
-        try {
-          const data = snapshot.val();
-          if (data) {
-            const messagesList = Object.keys(data).map(key => ({
-              id: key,
-              ...data[key]
-            }));
-            
-            // Sort by timestamp
-            messagesList.sort((a, b) => a.timestamp - b.timestamp);
-            
-            setMessages(messagesList);
-            
-            // Count unread messages (messages from company that haven't been read)
-            const unread = messagesList.filter(msg => 
-              msg.sender === 'company' && !msg.read
-            ).length;
-            setUnreadCount(unread);
-          } else {
-            // Initialize with welcome message if no messages exist
-            setMessages([{
-              id: 'welcome',
-              text: 'Welcome to SyncWise! How can we help you today?',
-              sender: 'company',
-              timestamp: Date.now(),
-              time: new Date().toLocaleTimeString(),
-              read: true
-            }]);
-            setUnreadCount(0);
+
+      onValue(
+        messagesRef,
+        async (snapshot) => {
+          try {
+            const data = snapshot.val();
+            if (data) {
+              const messagesList = Object.keys(data).map((key) => ({
+                id: key,
+                ...data[key],
+              }));
+
+              // Sort by timestamp
+              messagesList.sort((a, b) => a.timestamp - b.timestamp);
+
+              setMessages(messagesList);
+
+              // Mark all unread company messages as read
+              const updates = [];
+              Object.keys(data).forEach((key) => {
+                const msg = data[key];
+                if (msg.sender === "company" && !msg.read) {
+                  updates.push(
+                    update(ref(realtimeDb, `chats/${clientId}/${key}`), {
+                      read: true,
+                    })
+                  );
+                }
+              });
+              if (updates.length > 0) {
+                await Promise.all(updates);
+              }
+
+              // Count unread messages (should now be 0 after marking as read)
+              const unread = messagesList.filter(
+                (msg) => msg.sender === "company" && !msg.read
+              ).length;
+              setUnreadCount(unread);
+            } else {
+              // Initialize with welcome message if no messages exist
+              setMessages([
+                {
+                  id: "welcome",
+                  text: "Welcome to SyncWise! How can we help you today?",
+                  sender: "company",
+                  timestamp: Date.now(),
+                  time: new Date().toLocaleTimeString(),
+                  read: true,
+                },
+              ]);
+              setUnreadCount(0);
+            }
+            setConnectionStatus("Connected (Realtime)");
+          } catch (error) {
+            console.error("Error processing messages:", error);
+            fallbackToFirestore(clientId);
           }
-          setConnectionStatus("Connected (Realtime)");
-        } catch (error) {
-          console.error("Error processing messages:", error);
+        },
+        (error) => {
+          console.error("Error listening to messages:", error);
           fallbackToFirestore(clientId);
         }
-      }, (error) => {
-        console.error("Error listening to messages:", error);
-        fallbackToFirestore(clientId);
-      });
+      );
     } catch (error) {
       console.error("Error setting up message listener:", error);
       fallbackToFirestore(clientId);
@@ -152,35 +186,50 @@ export default function ClientCompanyChat() {
     console.log("Falling back to Firestore for chat");
     setUseFirestore(true);
     setConnectionStatus("Connected (Firestore)");
-    
+
     try {
       const messagesQuery = query(
         collection(db, "messages"),
         where("clientId", "==", clientId)
       );
-      
-      const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-        const messagesList = snapshot.docs.map(doc => ({
+
+      const unsubscribe = onSnapshot(messagesQuery, async (snapshot) => {
+        const messagesList = snapshot.docs.map((doc) => ({
           id: doc.id,
           text: doc.data().message,
           sender: doc.data().sender,
-          timestamp: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt),
-          time: new Date(doc.data().createdAt?.toDate?.() || doc.data().createdAt).toLocaleTimeString(),
-          read: doc.data().read || false
+          timestamp:
+            doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt),
+          time: new Date(
+            doc.data().createdAt?.toDate?.() || doc.data().createdAt
+          ).toLocaleTimeString(),
+          read: doc.data().read || false,
         }));
-        
+
         // Sort by timestamp
         messagesList.sort((a, b) => a.timestamp - b.timestamp);
-        
+
         setMessages(messagesList);
-        
-        // Count unread messages
-        const unread = messagesList.filter(msg => 
-          msg.sender === 'company' && !msg.read
+
+        // Mark all unread company messages as read
+        const unreadDocs = snapshot.docs.filter(
+          (doc) => doc.data().sender === "company" && !doc.data().read
+        );
+        const updates = [];
+        for (const docSnap of unreadDocs) {
+          updates.push(updateDoc(docSnap.ref, { read: true }));
+        }
+        if (updates.length > 0) {
+          await Promise.all(updates);
+        }
+
+        // Count unread messages (should now be 0 after marking as read)
+        const unread = messagesList.filter(
+          (msg) => msg.sender === "company" && !msg.read
         ).length;
         setUnreadCount(unread);
       });
-      
+
       return unsubscribe;
     } catch (error) {
       console.error("Error setting up Firestore listener:", error);
@@ -191,7 +240,7 @@ export default function ClientCompanyChat() {
   };
 
   const handleSend = async () => {
-    if (input.trim() === '') return;
+    if (input.trim() === "") return;
 
     try {
       const user = auth.currentUser;
@@ -199,10 +248,10 @@ export default function ClientCompanyChat() {
 
       const newMessage = {
         text: input.trim(),
-        sender: 'client',
+        sender: "client",
         timestamp: Date.now(),
         time: new Date().toLocaleTimeString(),
-        read: false
+        read: false,
       };
 
       if (useFirestore) {
@@ -212,46 +261,49 @@ export default function ClientCompanyChat() {
           clientName: clientName,
           companyName: companyName,
           message: input.trim(),
-          sender: 'client',
+          sender: "client",
           createdAt: new Date(),
-          read: false
+          read: false,
         });
       } else {
         // Use Realtime Database
         const messagesRef = ref(realtimeDb, `chats/${user.uid}`);
         await push(messagesRef, newMessage);
       }
-      setInput('');
+      setInput("");
     } catch (error) {
       console.error("Error sending message:", error);
       // Add message to local state as fallback
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        text: input.trim(),
-        sender: 'client',
-        timestamp: Date.now(),
-        time: new Date().toLocaleTimeString(),
-        read: false
-      }]);
-      setInput('');
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          text: input.trim(),
+          sender: "client",
+          timestamp: Date.now(),
+          time: new Date().toLocaleTimeString(),
+          read: false,
+        },
+      ]);
+      setInput("");
       alert("Message sent locally (database connection issue)");
     }
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleSend();
     }
   };
 
   const formatTime = (timestamp) => {
-    if (!timestamp) return '';
+    if (!timestamp) return "";
     const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
   const formatDate = (timestamp) => {
-    if (!timestamp) return '';
+    if (!timestamp) return "";
     const date = new Date(timestamp);
     return date.toLocaleDateString();
   };
@@ -268,19 +320,25 @@ export default function ClientCompanyChat() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Chat with Company</h2>
-          <p className="text-gray-600 mt-1">Communicate directly with your service provider</p>
+          <h2 className="text-2xl font-bold text-gray-800">
+            Chat with Company
+          </h2>
+          {/* <p className="text-gray-600 mt-1">
+            Communicate directly with your service provider
+          </p> */}
         </div>
         <div className="flex items-center gap-4">
           <div className="text-sm text-gray-500 bg-gray-50 px-4 py-2 rounded-2xl">
             {clientName} | {companyName}
           </div>
           <div className="flex items-center gap-2">
-            <Badge className={`${
-              connectionStatus.includes("Connected") 
-                ? "bg-green-50 text-green-700 border-green-200" 
-                : "bg-red-50 text-red-700 border-red-200"
-            } border`}>
+            <Badge
+              className={`${
+                connectionStatus.includes("Connected")
+                  ? "bg-green-50 text-green-700 border-green-200"
+                  : "bg-red-50 text-red-700 border-red-200"
+              } border`}
+            >
               <AlertCircle className="w-3 h-3 mr-1" />
               {connectionStatus}
             </Badge>
@@ -299,7 +357,7 @@ export default function ClientCompanyChat() {
       </div>
 
       {/* Chat Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-[#e6f4fa] rounded-3xl p-6 border border-white shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer group">
           <div className="flex items-start justify-between mb-4">
             <div className="p-3 rounded-2xl bg-gradient-to-r from-[#00B2E2] to-[#0091c2] shadow-lg">
@@ -347,13 +405,15 @@ export default function ClientCompanyChat() {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Chat Interface */}
-      <Card className="h-[600px] flex flex-col border-0 shadow-lg">
-        <CardHeader className="border-b border-gray-100 bg-[#e6f4fa] rounded-t-3xl">
+      <Card className="h-[500px] flex flex-col border-0 shadow-lg ">
+        <CardHeader className="border-b border-gray-100 ">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-[#00B2E2]">Chat with {companyName}</CardTitle>
+            <CardTitle className="text-[#00B2E2]">
+              Chat with {companyName}
+            </CardTitle>
             {unreadCount > 0 && (
               <Badge className="bg-red-500 text-white border-0">
                 {unreadCount} unread
@@ -363,36 +423,46 @@ export default function ClientCompanyChat() {
         </CardHeader>
         <CardContent className="flex-1 p-0 flex flex-col">
           {/* Messages */}
-          <div className="flex-1 p-6 overflow-y-auto max-h-[400px] bg-gray-50">
+          <div className="flex-1 p-6 overflow-y-auto max-h-[300px] bg-gray-50">
             {messages.length === 0 ? (
               <div className="text-center text-gray-500 py-8">
                 <div className="w-16 h-16 bg-[#e6f4fa] rounded-full flex items-center justify-center mx-auto mb-4">
                   <MessageSquare className="w-8 h-8 text-[#00B2E2]" />
                 </div>
                 <p className="text-gray-600 font-medium">No messages yet</p>
-                <p className="text-gray-400 text-sm mt-1">Start a conversation with your company!</p>
+                <p className="text-gray-400 text-sm mt-1">
+                  Start a conversation with your company!
+                </p>
               </div>
             ) : (
               <div className="space-y-4">
                 {messages.map((message, index) => (
                   <div
                     key={message.id || index}
-                    className={`flex ${message.sender === 'client' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex ${
+                      message.sender === "client"
+                        ? "justify-end"
+                        : "justify-start"
+                    }`}
                   >
                     <div
                       className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-lg ${
-                        message.sender === 'client'
-                          ? 'bg-[#00B2E2] text-white'
-                          : 'bg-white text-gray-800 border border-gray-200'
+                        message.sender === "client"
+                          ? "bg-[#00B2E2] text-white"
+                          : "bg-white text-gray-800 border border-gray-200"
                       }`}
                     >
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-xs font-medium">
-                          {message.sender === 'client' ? 'You' : companyName}
+                          {message.sender === "client" ? "You" : companyName}
                         </span>
-                        <span className={`text-xs ${
-                          message.sender === 'client' ? 'text-blue-100' : 'text-gray-500'
-                        }`}>
+                        <span
+                          className={`text-xs ${
+                            message.sender === "client"
+                              ? "text-blue-100"
+                              : "text-gray-500"
+                          }`}
+                        >
                           {formatTime(message.timestamp)}
                         </span>
                       </div>

@@ -1,28 +1,36 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import { auth, db } from "@/firebase";
-import { collection, query, where, getDocs, updateDoc, doc, orderBy } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  doc,
+  orderBy,
+} from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  MessageSquare, 
-  Clock, 
-  CheckCircle, 
-  AlertCircle, 
+import {
+  MessageSquare,
+  Clock,
+  CheckCircle,
+  AlertCircle,
   User,
   Calendar,
-  Search
-} from 'lucide-react';
+  Search,
+} from "lucide-react";
 
 export default function TicketRaising() {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [companyName, setCompanyName] = useState("");
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     fetchTickets();
@@ -35,30 +43,34 @@ export default function TicketRaising() {
 
       // Get company name from companies collection
       const companyDoc = await getDocs(collection(db, "companies"));
-      const companyData = companyDoc.docs.find(doc => doc.id === user.uid)?.data();
-      
+      const companyData = companyDoc.docs
+        .find((doc) => doc.id === user.uid)
+        ?.data();
+
       if (companyData) {
         setCompanyName(companyData.companyName);
-        
+
         // Fetch all tickets for this company (removed orderBy to avoid index issues)
         const ticketsQuery = query(
           collection(db, "tickets"),
           where("companyName", "==", companyData.companyName)
         );
-        
+
         const ticketsSnapshot = await getDocs(ticketsQuery);
-        const ticketsList = ticketsSnapshot.docs.map(doc => ({
+        const ticketsList = ticketsSnapshot.docs.map((doc) => ({
           id: doc.id,
-          ...doc.data()
+          ...doc.data(),
         }));
-        
+
         // Sort locally instead of in query
         ticketsList.sort((a, b) => {
-          const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt) || new Date(0);
-          const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt) || new Date(0);
+          const dateA =
+            a.createdAt?.toDate?.() || new Date(a.createdAt) || new Date(0);
+          const dateB =
+            b.createdAt?.toDate?.() || new Date(b.createdAt) || new Date(0);
           return dateB - dateA;
         });
-        
+
         setTickets(ticketsList);
       }
     } catch (error) {
@@ -73,16 +85,18 @@ export default function TicketRaising() {
     try {
       await updateDoc(doc(db, "tickets", ticketId), {
         status: newStatus,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
-      
+
       // Update local state
-      setTickets(tickets.map(ticket => 
-        ticket.id === ticketId 
-          ? { ...ticket, status: newStatus, updatedAt: new Date() }
-          : ticket
-      ));
-      
+      setTickets(
+        tickets.map((ticket) =>
+          ticket.id === ticketId
+            ? { ...ticket, status: newStatus, updatedAt: new Date() }
+            : ticket
+        )
+      );
+
       alert("Ticket status updated successfully!");
     } catch (error) {
       console.error("Error updating ticket status:", error);
@@ -135,51 +149,55 @@ export default function TicketRaising() {
 
   // Calculate statistics
   const totalTickets = tickets.length;
-  const openTickets = tickets.filter(t => t.status === "open").length;
-  const inProgressTickets = tickets.filter(t => t.status === "in-progress").length;
-  const resolvedTickets = tickets.filter(t => t.status === "resolved").length;
+  const openTickets = tickets.filter((t) => t.status === "open").length;
+  const inProgressTickets = tickets.filter(
+    (t) => t.status === "in-progress"
+  ).length;
+  const resolvedTickets = tickets.filter((t) => t.status === "resolved").length;
 
   const stats = [
-    { 
-      label: 'Total Tickets', 
-      value: totalTickets, 
+    {
+      label: "Total Tickets",
+      value: totalTickets,
       icon: MessageSquare,
-      color: 'from-blue-500 to-cyan-500',
-      bgColor: 'bg-blue-50 hover:bg-blue-100',
-      textColor: 'text-blue-600'
+      color: "from-blue-500 to-cyan-500",
+      bgColor: "bg-blue-50 hover:bg-blue-100",
+      textColor: "text-blue-600",
     },
-    { 
-      label: 'Open', 
-      value: openTickets, 
+    {
+      label: "Open",
+      value: openTickets,
       icon: AlertCircle,
-      color: 'from-red-500 to-pink-500',
-      bgColor: 'bg-red-50 hover:bg-red-100',
-      textColor: 'text-red-600'
+      color: "from-red-500 to-pink-500",
+      bgColor: "bg-red-50 hover:bg-red-100",
+      textColor: "text-red-600",
     },
-    { 
-      label: 'In Progress', 
-      value: inProgressTickets, 
+    {
+      label: "In Progress",
+      value: inProgressTickets,
       icon: Clock,
-      color: 'from-yellow-500 to-orange-500',
-      bgColor: 'bg-yellow-50 hover:bg-yellow-100',
-      textColor: 'text-yellow-600'
+      color: "from-yellow-500 to-orange-500",
+      bgColor: "bg-yellow-50 hover:bg-yellow-100",
+      textColor: "text-yellow-600",
     },
-    { 
-      label: 'Resolved', 
-      value: resolvedTickets, 
+    {
+      label: "Resolved",
+      value: resolvedTickets,
       icon: CheckCircle,
-      color: 'from-green-500 to-emerald-500',
-      bgColor: 'bg-green-50 hover:bg-green-100',
-      textColor: 'text-green-600'
+      color: "from-green-500 to-emerald-500",
+      bgColor: "bg-green-50 hover:bg-green-100",
+      textColor: "text-green-600",
     },
   ];
 
   // Filter tickets
-  const filteredTickets = tickets.filter(ticket => {
-    const matchesSearch = ticket.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         ticket.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         ticket.clientName?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
+  const filteredTickets = tickets.filter((ticket) => {
+    const matchesSearch =
+      ticket.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ticket.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ticket.clientName?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || ticket.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -195,8 +213,20 @@ export default function TicketRaising() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800">Ticket Management</h2>
-        <div className="text-sm text-gray-600">
-          Company: {companyName}
+        <div className="flex items-center gap-2">
+          <div className="text-sm text-gray-600">Company: {companyName}</div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setLoading(true);
+              setTickets([]);
+              fetchTickets();
+            }}
+            className="ml-2"
+          >
+            Refresh
+          </Button>
         </div>
       </div>
 
@@ -210,18 +240,20 @@ export default function TicketRaising() {
               className={`${stat.bgColor} backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer group`}
             >
               <div className="flex items-start justify-between mb-4">
-                <div className={`p-3 rounded-xl bg-gradient-to-r ${stat.color} shadow-lg`}>
+                <div
+                  className={`p-3 rounded-xl bg-gradient-to-r ${stat.color} shadow-lg`}
+                >
                   <Icon className="w-6 h-6 text-white" />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
-                <div className={`text-3xl font-bold ${stat.textColor} group-hover:scale-105 transition-transform duration-200`}>
+                <div
+                  className={`text-3xl font-bold ${stat.textColor} group-hover:scale-105 transition-transform duration-200`}
+                >
                   {stat.value}
                 </div>
-                <div className="text-slate-600 font-medium">
-                  {stat.label}
-                </div>
+                <div className="text-slate-600 font-medium">{stat.label}</div>
               </div>
             </div>
           );
@@ -266,13 +298,18 @@ export default function TicketRaising() {
           ) : (
             <div className="space-y-4">
               {filteredTickets.map((ticket) => (
-                <Card key={ticket.id} className="hover:shadow-lg transition-shadow">
+                <Card
+                  key={ticket.id}
+                  className="hover:shadow-lg transition-shadow"
+                >
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           {getStatusIcon(ticket.status)}
-                          <h3 className="text-lg font-semibold">{ticket.title}</h3>
+                          <h3 className="text-lg font-semibold">
+                            {ticket.title}
+                          </h3>
                           <Badge className={getStatusColor(ticket.status)}>
                             {ticket.status}
                           </Badge>
@@ -280,7 +317,9 @@ export default function TicketRaising() {
                             {ticket.priority}
                           </Badge>
                         </div>
-                        <p className="text-gray-600 mb-3">{ticket.description}</p>
+                        <p className="text-gray-600 mb-3">
+                          {ticket.description}
+                        </p>
                         <div className="flex items-center gap-4 text-sm text-gray-500">
                           <div className="flex items-center gap-1">
                             <User className="w-4 h-4" />
@@ -288,14 +327,18 @@ export default function TicketRaising() {
                           </div>
                           <div className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
-                            <span>{ticket.createdAt?.toDate().toLocaleDateString()}</span>
+                            <span>
+                              {ticket.createdAt?.toDate().toLocaleDateString()}
+                            </span>
                           </div>
                         </div>
                       </div>
                       <div className="flex flex-col gap-2">
                         <select
                           value={ticket.status}
-                          onChange={(e) => updateTicketStatus(ticket.id, e.target.value)}
+                          onChange={(e) =>
+                            updateTicketStatus(ticket.id, e.target.value)
+                          }
                           className="p-2 border border-gray-300 rounded text-sm"
                         >
                           <option value="open">Open</option>

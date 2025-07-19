@@ -2,22 +2,29 @@
 
 import React, { useState, useEffect } from "react";
 import { auth, db } from "@/firebase";
-import { collection, query, where, getDocs, addDoc, orderBy } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  addDoc,
+  orderBy,
+} from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { safeSortByDate, handleFirebaseError } from "@/lib/utils";
-import { 
-  MessageSquare, 
-  Clock, 
-  CheckCircle, 
-  AlertCircle, 
+import {
+  MessageSquare,
+  Clock,
+  CheckCircle,
+  AlertCircle,
   User,
   Calendar,
   Plus,
-  FileText
-} from 'lucide-react';
+  FileText,
+} from "lucide-react";
 
 export default function TicketRaise() {
   const [tickets, setTickets] = useState([]);
@@ -29,7 +36,7 @@ export default function TicketRaise() {
     subject: "",
     category: "",
     description: "",
-    priority: "medium"
+    priority: "medium",
   });
 
   useEffect(() => {
@@ -43,30 +50,32 @@ export default function TicketRaise() {
 
       // Get client data from clients collection
       const clientDoc = await getDocs(collection(db, "clients"));
-      const clientData = clientDoc.docs.find(doc => doc.id === user.uid)?.data();
-      
+      const clientData = clientDoc.docs
+        .find((doc) => doc.id === user.uid)
+        ?.data();
+
       if (clientData) {
         setClientName(clientData.clientName);
         setCompanyName(clientData.companyName);
-        
+
         // Fetch all tickets for this client (removed orderBy to avoid index issues)
         const ticketsQuery = query(
           collection(db, "tickets"),
           where("clientId", "==", user.uid)
         );
-        
+
         const ticketsSnapshot = await getDocs(ticketsQuery);
-        const ticketsList = ticketsSnapshot.docs.map(doc => ({
+        const ticketsList = ticketsSnapshot.docs.map((doc) => ({
           id: doc.id,
-          ...doc.data()
+          ...doc.data(),
         }));
-        
+
         // Use utility function for safe sorting
-        const sortedTickets = safeSortByDate(ticketsList, 'createdAt', false);
+        const sortedTickets = safeSortByDate(ticketsList, "createdAt", false);
         setTickets(sortedTickets);
       }
     } catch (error) {
-      handleFirebaseError(error, 'fetchClientAndTickets');
+      handleFirebaseError(error, "fetchClientAndTickets");
     } finally {
       setLoading(false);
     }
@@ -85,23 +94,23 @@ export default function TicketRaise() {
         companyName: companyName,
         status: "open",
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       await addDoc(collection(db, "tickets"), ticketData);
-      
+
       // Reset form
       setNewTicket({
         subject: "",
         category: "",
         description: "",
-        priority: "medium"
+        priority: "medium",
       });
       setShowForm(false);
-      
+
       // Refresh tickets list
       fetchClientAndTickets();
-      
+
       alert("Ticket submitted successfully!");
     } catch (error) {
       console.error("Error submitting ticket:", error);
@@ -154,42 +163,44 @@ export default function TicketRaise() {
 
   // Calculate statistics
   const totalTickets = tickets.length;
-  const openTickets = tickets.filter(t => t.status === "open").length;
-  const inProgressTickets = tickets.filter(t => t.status === "in-progress").length;
-  const resolvedTickets = tickets.filter(t => t.status === "resolved").length;
+  const openTickets = tickets.filter((t) => t.status === "open").length;
+  const inProgressTickets = tickets.filter(
+    (t) => t.status === "in-progress"
+  ).length;
+  const resolvedTickets = tickets.filter((t) => t.status === "resolved").length;
 
   const stats = [
-    { 
-      label: 'Total Tickets', 
-      value: totalTickets, 
+    {
+      label: "Total Tickets",
+      value: totalTickets,
       icon: MessageSquare,
-      color: 'from-[#00B2E2] to-[#0091c2]',
-      bgColor: 'bg-[#e6f4fa] hover:bg-[#d1eef7]',
-      textColor: 'text-[#00B2E2]'
+      color: "from-[#00B2E2] to-[#0091c2]",
+      bgColor: "bg-[#e6f4fa] hover:bg-[#d1eef7]",
+      textColor: "text-[#00B2E2]",
     },
-    { 
-      label: 'Open', 
-      value: openTickets, 
+    {
+      label: "Open",
+      value: openTickets,
       icon: AlertCircle,
-      color: 'from-red-500 to-pink-500',
-      bgColor: 'bg-red-50 hover:bg-red-100',
-      textColor: 'text-red-600'
+      color: "from-red-500 to-pink-500",
+      bgColor: "bg-red-50 hover:bg-red-100",
+      textColor: "text-red-600",
     },
-    { 
-      label: 'In Progress', 
-      value: inProgressTickets, 
+    {
+      label: "In Progress",
+      value: inProgressTickets,
       icon: Clock,
-      color: 'from-yellow-500 to-orange-500',
-      bgColor: 'bg-yellow-50 hover:bg-yellow-100',
-      textColor: 'text-yellow-600'
+      color: "from-yellow-500 to-orange-500",
+      bgColor: "bg-yellow-50 hover:bg-yellow-100",
+      textColor: "text-yellow-600",
     },
-    { 
-      label: 'Resolved', 
-      value: resolvedTickets, 
+    {
+      label: "Resolved",
+      value: resolvedTickets,
       icon: CheckCircle,
-      color: 'from-green-500 to-emerald-500',
-      bgColor: 'bg-green-50 hover:bg-green-100',
-      textColor: 'text-green-600'
+      color: "from-green-500 to-emerald-500",
+      bgColor: "bg-green-50 hover:bg-green-100",
+      textColor: "text-green-600",
     },
   ];
 
@@ -206,7 +217,9 @@ export default function TicketRaise() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Support Tickets</h2>
-          <p className="text-gray-600 mt-1">Submit and track your support requests</p>
+          {/* <p className="text-gray-600 mt-1">
+            Submit and track your support requests
+          </p> */}
         </div>
         <div className="text-sm text-gray-500 bg-gray-50 px-4 py-2 rounded-2xl">
           {clientName} | {companyName}
@@ -223,18 +236,20 @@ export default function TicketRaise() {
               className={`${stat.bgColor} rounded-3xl p-6 border border-white shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer group`}
             >
               <div className="flex items-start justify-between mb-4">
-                <div className={`p-3 rounded-2xl bg-gradient-to-r ${stat.color} shadow-lg`}>
+                <div
+                  className={`p-3 rounded-2xl bg-gradient-to-r ${stat.color} shadow-lg`}
+                >
                   <Icon className="w-6 h-6 text-white" />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
-                <div className={`text-3xl font-bold ${stat.textColor} group-hover:scale-105 transition-transform duration-200`}>
+                <div
+                  className={`text-3xl font-bold ${stat.textColor} group-hover:scale-105 transition-transform duration-200`}
+                >
                   {stat.value}
                 </div>
-                <div className="text-gray-600 font-medium">
-                  {stat.label}
-                </div>
+                <div className="text-gray-600 font-medium">{stat.label}</div>
               </div>
             </div>
           );
@@ -242,39 +257,50 @@ export default function TicketRaise() {
       </div>
 
       {/* Raise New Ticket */}
-      <Card className="border-0 shadow-lg">
-        <CardHeader className="bg-[#e6f4fa] rounded-t-3xl">
+      <Card className="border-0 shadow-lg ">
+        <CardHeader className=" ">
           <div className="flex justify-between items-center">
             <CardTitle className="text-[#00B2E2]">Raise New Ticket</CardTitle>
-            <Button 
+            <Button
               onClick={() => setShowForm(!showForm)}
               className="bg-[#00B2E2] hover:bg-[#0091c2] text-white px-6 py-2 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl"
             >
               <Plus className="w-4 h-4 mr-2" />
-              {showForm ? 'Cancel' : 'New Ticket'}
+              {showForm ? "Cancel" : "New Ticket"}
             </Button>
           </div>
         </CardHeader>
         <CardContent className="p-6">
           {showForm && (
-            <form onSubmit={handleSubmitTicket} className="space-y-6 p-6 border border-gray-100 rounded-3xl bg-gray-50">
+            <form
+              onSubmit={handleSubmitTicket}
+              className="space-y-6 p-6 border border-gray-100 rounded-3xl bg-gray-50"
+            >
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Subject</label>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Subject
+                </label>
                 <Input
                   value={newTicket.subject}
-                  onChange={(e) => setNewTicket({...newTicket, subject: e.target.value})}
+                  onChange={(e) =>
+                    setNewTicket({ ...newTicket, subject: e.target.value })
+                  }
                   placeholder="Enter issue title"
-                  className="rounded-2xl border-gray-200 focus:border-[#00B2E2] focus:ring-[#00B2E2]"
+                  className="h-12 w-1/2 rounded-2xl border-gray-200 focus:border-[#00B2E2] focus:ring-[#00B2E2]"
                   required
                 />
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-700">Category</label>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
+                    Category
+                  </label>
                   <select
                     value={newTicket.category}
-                    onChange={(e) => setNewTicket({...newTicket, category: e.target.value})}
+                    onChange={(e) =>
+                      setNewTicket({ ...newTicket, category: e.target.value })
+                    }
                     className="w-full p-4 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#00B2E2] focus:border-[#00B2E2] bg-white"
                     required
                   >
@@ -287,10 +313,14 @@ export default function TicketRaise() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-700">Priority</label>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
+                    Priority
+                  </label>
                   <select
                     value={newTicket.priority}
-                    onChange={(e) => setNewTicket({...newTicket, priority: e.target.value})}
+                    onChange={(e) =>
+                      setNewTicket({ ...newTicket, priority: e.target.value })
+                    }
                     className="w-full p-4 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#00B2E2] focus:border-[#00B2E2] bg-white"
                   >
                     <option value="low">Low</option>
@@ -299,28 +329,32 @@ export default function TicketRaise() {
                   </select>
                 </div>
               </div>
-              
+
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Description</label>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Description
+                </label>
                 <textarea
                   value={newTicket.description}
-                  onChange={(e) => setNewTicket({...newTicket, description: e.target.value})}
+                  onChange={(e) =>
+                    setNewTicket({ ...newTicket, description: e.target.value })
+                  }
                   placeholder="Describe your issue in detail..."
                   className="w-full p-4 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#00B2E2] focus:border-[#00B2E2] resize-none bg-white"
                   rows="4"
                   required
                 />
               </div>
-              
+
               <div className="flex gap-3 pt-4">
-                <Button 
+                <Button
                   type="submit"
                   className="bg-[#00B2E2] hover:bg-[#0091c2] text-white px-6 py-2 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
                   <FileText className="w-4 h-4 mr-2" />
                   Submit Ticket
                 </Button>
-                <Button 
+                <Button
                   type="button"
                   variant="outline"
                   onClick={() => setShowForm(false)}
@@ -336,33 +370,50 @@ export default function TicketRaise() {
 
       {/* Tickets List */}
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-gray-800">Your Tickets</h3>
+        <h3 className="text-lg font-semibold mb-4 text-gray-800">
+          Your Tickets
+        </h3>
         {tickets.length === 0 ? (
-          <Card className="border-0 shadow-lg">
+          <Card className="border-0 shadow-lg ">
             <CardContent className="p-8">
               <div className="text-center">
                 <div className="w-16 h-16 bg-[#e6f4fa] rounded-full flex items-center justify-center mx-auto mb-4">
                   <MessageSquare className="w-8 h-8 text-[#00B2E2]" />
                 </div>
                 <p className="text-gray-500 text-lg">No tickets found.</p>
-                <p className="text-gray-400 text-sm mt-1">Create your first support ticket above.</p>
+                <p className="text-gray-400 text-sm mt-1">
+                  Create your first support ticket above.
+                </p>
               </div>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-4">
             {tickets.map((ticket) => (
-              <Card key={ticket.id} className="border-0 shadow-lg hover:shadow-xl transition-all duration-200">
-                <CardContent className="p-6">
+              <Card
+                key={ticket.id}
+                className="border-0 shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                <CardContent className="px-6 ">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <h4 className="font-semibold text-lg text-gray-800">{ticket.subject}</h4>
-                        <Badge className={`${getStatusColor(ticket.status)} border`}>
+                        <h4 className="font-semibold text-lg text-gray-800">
+                          {ticket.subject}
+                        </h4>
+                        <Badge
+                          className={`${getStatusColor(ticket.status)} border`}
+                        >
                           {getStatusIcon(ticket.status)}
-                          <span className="ml-1 capitalize">{ticket.status}</span>
+                          <span className="ml-1 capitalize">
+                            {ticket.status}
+                          </span>
                         </Badge>
-                        <Badge className={`${getPriorityColor(ticket.priority)} border`}>
+                        <Badge
+                          className={`${getPriorityColor(
+                            ticket.priority
+                          )} border`}
+                        >
                           {ticket.priority} Priority
                         </Badge>
                       </div>
@@ -370,7 +421,8 @@ export default function TicketRaise() {
                       <div className="flex items-center gap-4 text-sm text-gray-500">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />
-                          {ticket.createdAt?.toDate?.()?.toLocaleDateString() || new Date(ticket.createdAt).toLocaleDateString()}
+                          {ticket.createdAt?.toDate?.()?.toLocaleDateString() ||
+                            new Date(ticket.createdAt).toLocaleDateString()}
                         </span>
                         <span className="flex items-center gap-1">
                           <User className="w-4 h-4" />
