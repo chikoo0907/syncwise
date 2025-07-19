@@ -173,6 +173,28 @@ export default function ManageProjects() {
       ? projects
       : projects.filter((project) => project.status === filterStatus);
 
+  // Helper to get projects needing alerts
+  const getAlertProjects = () => {
+    const now = new Date();
+    return projects.filter((project) => {
+      if (!project.endDate) return false;
+      const status = project.status?.toLowerCase();
+      if (status === "completed") return false;
+      const endDate = new Date(project.endDate);
+      const daysToDeadline = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+      const daysAfterDeadline = Math.ceil((now - endDate) / (1000 * 60 * 60 * 24));
+      // Within 7 days before deadline
+      if (daysToDeadline <= 7 && daysToDeadline >= 0) {
+        return true;
+      }
+      // Within 3 days after deadline and not completed
+      if (daysToDeadline < 0 && daysAfterDeadline <= 3) {
+        return true;
+      }
+      return false;
+    });
+  };
+
   // Table columns definition
   const columns = useMemo(
     () => [
@@ -324,6 +346,28 @@ export default function ManageProjects() {
           Showing {table.getFilteredRowModel().rows.length} of{" "}
           {filteredProjects.length} projects
         </div>
+      </div>
+
+      <div className="space-y-2">
+        {/* Alerts for projects with upcoming or missed deadlines */}
+        {getAlertProjects().map((project) => {
+          const now = new Date();
+          const endDate = new Date(project.endDate);
+          const status = project.status?.toLowerCase();
+          const daysToDeadline = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+          const daysAfterDeadline = Math.ceil((now - endDate) / (1000 * 60 * 60 * 24));
+          let message = "";
+          if (daysToDeadline <= 7 && daysToDeadline >= 0) {
+            message = `Project "${project.name}" deadline is in ${daysToDeadline} day(s) (${endDate.toLocaleDateString()}).`;
+          } else if (daysToDeadline < 0 && daysAfterDeadline <= 3 && status !== "completed") {
+            message = `Project "${project.name}" deadline was ${Math.abs(daysToDeadline)} day(s) ago (${endDate.toLocaleDateString()}) and is not completed!`;
+          }
+          return (
+            <div key={project.id} className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-3 rounded mb-2">
+              <strong>Alert:</strong> {message}
+            </div>
+          );
+        })}
       </div>
 
       <div className="rounded-md border border-[#a3c5e0] bg-white overflow-x-auto">

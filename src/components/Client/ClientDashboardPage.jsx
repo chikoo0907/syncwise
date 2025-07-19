@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   HiOutlineClipboardList,
   HiOutlineUserCircle,
@@ -9,8 +9,10 @@ import {
   HiOutlineBell,
   HiOutlineLogout,
 } from "react-icons/hi";
-import { auth } from "@/firebase";
+import { auth, db } from "@/firebase";
 import { signOut } from "firebase/auth";
+import { collection, getDocs } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import TicketRaise from "./TicketRaise";
 import TimelineTracker from "./TimelineTracker";
@@ -42,7 +44,27 @@ const sections = [
 
 export default function ClientDashboardPage() {
   const [activeSection, setActiveSection] = useState("Tickets");
+  const [clientName, setClientName] = useState("");
   const router = useRouter();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const clientDoc = await getDocs(collection(db, "clients"));
+          const clientData = clientDoc.docs
+            .find((doc) => doc.id === user.uid)
+            ?.data();
+          if (clientData) {
+            setClientName(clientData.clientName);
+          }
+        } catch (error) {
+          setClientName("");
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -74,11 +96,16 @@ export default function ClientDashboardPage() {
       <aside className="w-80 bg-[#a3c5e0] shadow-2xl shadow-[#496c9c] p-8 flex flex-col justify-between sticky top-0 h-screen rounded-br-4xl rounded-tr-4xl">
         <div>
           <div className="flex flex-col items-center gap-3 mb-10">
-            <span className="inline-block bg-[#e6f4fa] rounded-2xl w-20">
-            <img src="/logo.png" />
+            <span className="inline-block bg-[#e6f4fa] rounded-2xl w-20 flex items-center justify-center">
+              <img src="/logo.png" className="mx-auto my-2" />
             </span>
-            <div>
-              <p className=" text-sm text-gray-500">Client Panel</p>
+            <div className="flex flex-col items-center mt-2 ">
+              <p className=" text-sm text-gray-500 text-center">Client Panel</p>
+              <p className="text-md text-gray-700 font-semibold text-center">
+                <span className="text-lg md:text-xl lg:text-2xl">
+                  {clientName || "Client Name"}
+                </span>
+              </p>
             </div>
           </div>
           <nav className="flex flex-col gap-6">
