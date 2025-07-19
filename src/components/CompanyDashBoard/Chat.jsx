@@ -1,375 +1,475 @@
-import React, { useState, useEffect } from 'react';
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { auth, realtimeDb, db, testRealtimeConnection } from "@/firebase";
+import { ref, push, onValue, off, set } from "firebase/database";
+import { collection, query, where, getDocs, addDoc, onSnapshot } from "firebase/firestore";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { 
-  Search, 
-  Filter, 
-  ChevronRight,
+  MessageSquare, 
   Send,
-  X,
   User,
-  Calendar,
-  MessageSquare,
-  Phone,
-  Video,
-  Paperclip,
-  Smile,
-  MoreVertical,
-  Check,
-  Clock
+  Search,
+  Building,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 
 export default function Chat() {
-  const [clients, setClients] = useState([
-    { 
-      id: 1, 
-      name: 'Sarah Johnson', 
-      email: 'sarah.j@university.edu',
-      lastMessage: 'Hi! I have a question about my order',
-      unread: 3,
-      lastMessageTime: '2 hours ago',
-      avatar: 'SJ',
-      status: 'active',
-      company: 'Tech University'
-    },
-    { 
-      id: 2, 
-      name: 'Mike Chen', 
-      email: 'mike.chen@student.edu',
-      lastMessage: 'The project is going well, thanks!',
-      unread: 0,
-      lastMessageTime: '4 hours ago',
-      avatar: 'MC',
-      status: 'active',
-      company: 'Student Inc'
-    },
-    { 
-      id: 3, 
-      name: 'Emma Wilson', 
-      email: 'emma.w@college.edu',
-      lastMessage: 'Can we schedule a meeting next week?',
-      unread: 1,
-      lastMessageTime: '1 day ago',
-      avatar: 'EW',
-      status: 'away',
-      company: 'College Partners'
-    },
-    { 
-      id: 4, 
-      name: 'David Rodriguez', 
-      email: 'david.r@uni.edu',
-      lastMessage: 'Please review the attached documents',
-      unread: 0,
-      lastMessageTime: '3 days ago',
-      avatar: 'DR',
-      status: 'offline',
-      company: 'University Systems'
-    },
-    { 
-      id: 5, 
-      name: 'Lisa Thompson', 
-      email: 'lisa.t@business.com',
-      lastMessage: 'The contract looks good to me',
-      unread: 0,
-      lastMessageTime: '1 week ago',
-      avatar: 'LT',
-      status: 'offline',
-      company: 'Business Solutions'
-    }
-  ]);
-
+  const [clients, setClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [messageText, setMessageText] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [messageText, setMessageText] = useState("");
   const [messages, setMessages] = useState({});
-  const [isMobileView, setIsMobileView] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [companyName, setCompanyName] = useState("");
+  const [dbConnectionStatus, setDbConnectionStatus] = useState("Connecting...");
+  const [useFirestore, setUseFirestore] = useState(false);
 
-  // Check if mobile view
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobileView(window.innerWidth < 768);
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    fetchClients();
+    testConnection();
   }, []);
 
-  // Initialize messages for each client
   useEffect(() => {
-    const initialMessages = {};
-    clients.forEach(client => {
-      initialMessages[client.id] = [
-        {
-          id: 1,
-          text: client.lastMessage,
-          sender: 'client',
-          time: client.lastMessageTime,
-          read: client.unread === 0
-        },
-        {
-          id: 2,
-          text: 'Thank you for reaching out to us!',
-          sender: 'you',
-          time: '1 day ago',
-          read: true
-        }
-      ];
-    });
-    setMessages(initialMessages);
-  }, [clients]);
+    if (selectedClient) {
+      setupMessageListener(selectedClient.id);
+    }
+    return () => {
+      if (selectedClient) {
+        off(ref(realtimeDb, `chats/${selectedClient.id}`));
+      }
+    };
+  }, [selectedClient]);
 
-  const filteredClients = clients.filter(client => {
-    const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         client.company.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesFilter = filterStatus === 'all' || 
-                         (filterStatus === 'unread' && client.unread > 0) ||
-                         (filterStatus === 'active' && client.status === 'active') ||
-                         (filterStatus === 'away' && client.status === 'away') ||
-                         (filterStatus === 'offline' && client.status === 'offline');
-    
-    return matchesSearch && matchesFilter;
-  });
+  const fetchClients = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
 
-  const handleSendMessage = () => {
-    if (messageText.trim() && selectedClient) {
-      const newMessage = {
-        id: messages[selectedClient.id].length + 1,
-        text: messageText,
-        sender: 'you',
-        time: 'Just now',
-        read: true
-      };
+      // Get company name from companies collection
+      const companyDoc = await getDocs(collection(db, "companies"));
+      const companyData = companyDoc.docs.find(doc => doc.id === user.uid)?.data();
       
+      if (companyData) {
+        setCompanyName(companyData.companyName);
+        
+        // Fetch all clients for this company (removed orderBy to avoid index issues)
+        const clientsQuery = query(
+          collection(db, "clients"),
+          where("companyName", "==", companyData.companyName)
+        );
+        
+        const clientsSnapshot = await getDocs(clientsQuery);
+        const clientsList = clientsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          name: doc.data().clientName,
+          email: doc.data().email,
+          avatar: doc.data().clientName?.charAt(0)?.toUpperCase() || 'C',
+          status: 'active', // Default status
+          lastMessage: 'No messages yet',
+          lastMessageTime: 'Never',
+          unread: 0
+        }));
+        
+        // Sort locally instead of in query
+        clientsList.sort((a, b) => {
+          const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt) || new Date(0);
+          const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt) || new Date(0);
+          return dateB - dateA;
+        });
+        
+        setClients(clientsList);
+        
+        // Initialize messages for each client
+        const initialMessages = {};
+        clientsList.forEach(client => {
+          initialMessages[client.id] = [
+            {
+              id: 1,
+              text: 'Welcome to SyncWise! How can we help you today?',
+              sender: 'company',
+              time: 'Just now',
+              read: true
+            }
+          ];
+        });
+        setMessages(initialMessages);
+      }
+    } catch (error) {
+      console.error("Error fetching clients:", error);
+      // Don't throw error, just log it
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const testConnection = async () => {
+    setDbConnectionStatus("Testing connection...");
+    try {
+      const isConnected = await testRealtimeConnection();
+      if (isConnected) {
+        setDbConnectionStatus("Connected (Realtime)");
+        setUseFirestore(false);
+      } else {
+        setDbConnectionStatus("Realtime failed, using Firestore");
+        setUseFirestore(true);
+      }
+    } catch (error) {
+      console.error("Connection test failed:", error);
+      if (error.code === 'PERMISSION_DENIED') {
+        setDbConnectionStatus("Permission denied - using Firestore");
+        setUseFirestore(true);
+        // Show alert with instructions
+        alert("Firebase Realtime Database permission denied. Please update your database rules. Using Firestore as fallback.");
+      } else {
+        setDbConnectionStatus("Connection failed");
+        setUseFirestore(true);
+      }
+    }
+  };
+
+  const retryConnection = () => {
+    testConnection();
+  };
+
+  const setupMessageListener = (clientId) => {
+    // Try Realtime Database first
+    try {
+      const messagesRef = ref(realtimeDb, `chats/${clientId}`);
+      
+      onValue(messagesRef, (snapshot) => {
+        try {
+          const data = snapshot.val();
+          if (data) {
+            const messagesList = Object.keys(data).map(key => ({
+              id: key,
+              ...data[key]
+            }));
+            
+            // Sort by timestamp
+            messagesList.sort((a, b) => a.timestamp - b.timestamp);
+            
+            setMessages(prev => ({
+              ...prev,
+              [clientId]: messagesList
+            }));
+          } else {
+            // Initialize with welcome message if no messages exist
+            setMessages(prev => ({
+              ...prev,
+              [clientId]: [{
+                id: 'welcome',
+                text: 'Welcome to SyncWise! How can we help you today?',
+                sender: 'company',
+                timestamp: Date.now(),
+                time: new Date().toLocaleTimeString(),
+                read: true
+              }]
+            }));
+          }
+          setDbConnectionStatus("Connected (Realtime)");
+        } catch (error) {
+          console.error("Error processing messages:", error);
+          fallbackToFirestore(clientId);
+        }
+      }, (error) => {
+        console.error("Error listening to messages:", error);
+        fallbackToFirestore(clientId);
+      });
+    } catch (error) {
+      console.error("Error setting up message listener:", error);
+      fallbackToFirestore(clientId);
+    }
+  };
+
+  const fallbackToFirestore = (clientId) => {
+    console.log("Falling back to Firestore for chat");
+    setUseFirestore(true);
+    setDbConnectionStatus("Connected (Firestore)");
+    
+    try {
+      const messagesQuery = query(
+        collection(db, "messages"),
+        where("clientId", "==", clientId)
+      );
+      
+      const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+        const messagesList = snapshot.docs.map(doc => ({
+          id: doc.id,
+          text: doc.data().message,
+          sender: doc.data().sender,
+          timestamp: doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt),
+          time: new Date(doc.data().createdAt?.toDate?.() || doc.data().createdAt).toLocaleTimeString(),
+          read: doc.data().read || false
+        }));
+        
+        // Sort by timestamp
+        messagesList.sort((a, b) => a.timestamp - b.timestamp);
+        
+        setMessages(prev => ({
+          ...prev,
+          [clientId]: messagesList
+        }));
+      });
+      
+      // Store unsubscribe function for cleanup
+      return unsubscribe;
+    } catch (error) {
+      console.error("Error setting up Firestore listener:", error);
+      setDbConnectionStatus("Connection Failed");
       setMessages(prev => ({
         ...prev,
-        [selectedClient.id]: [...prev[selectedClient.id], newMessage]
+        [clientId]: []
       }));
-      
-      // Mark as read
-      setClients(clients.map(client => 
-        client.id === selectedClient.id ? { ...client, unread: 0 } : client
-      ));
-      
-      setMessageText('');
     }
   };
 
-  const handleClientSelect = (client) => {
-    setSelectedClient(client);
-    // Mark as read when selected
-    setClients(clients.map(c => 
-      c.id === client.id ? { ...c, unread: 0 } : c
-    ));
-  };
+  const handleSendMessage = async () => {
+    if (messageText.trim() && selectedClient) {
+      const newMessage = {
+        text: messageText.trim(),
+        sender: 'company',
+        timestamp: Date.now(),
+        time: new Date().toLocaleTimeString(),
+        read: false
+      };
 
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'active': return 'bg-green-500';
-      case 'away': return 'bg-yellow-500';
-      default: return 'bg-gray-400';
+      try {
+        if (useFirestore) {
+          // Use Firestore as fallback
+          await addDoc(collection(db, "messages"), {
+            clientId: selectedClient.id,
+            clientName: selectedClient.name,
+            companyName: companyName,
+            message: messageText.trim(),
+            sender: 'company',
+            createdAt: new Date(),
+            read: false
+          });
+        } else {
+          // Use Realtime Database
+          const messagesRef = ref(realtimeDb, `chats/${selectedClient.id}`);
+          await push(messagesRef, newMessage);
+        }
+        setMessageText('');
+      } catch (error) {
+        console.error("Error sending message:", error);
+        // Add message to local state as fallback
+        setMessages(prev => ({
+          ...prev,
+          [selectedClient.id]: [...(prev[selectedClient.id] || []), newMessage]
+        }));
+        setMessageText('');
+        alert("Message sent locally (database connection issue)");
+      }
     }
   };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSendMessage();
+    }
+  };
+
+  const filteredClients = clients.filter(client =>
+    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    client.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const selectedClientMessages = selectedClient ? (messages[selectedClient.id] || []) : [];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg text-gray-600">Loading chat...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-      <div className="max-w-7xl mx-auto bg-white rounded-2xl shadow-md overflow-hidden">
-        <div className="flex flex-col md:flex-row h-[calc(100vh-2rem)] md:h-[calc(100vh-3rem)]">
-          {/* Client List Sidebar */}
-          <div className={`${isMobileView && selectedClient ? 'hidden' : 'block'} w-full md:w-1/3 border-r border-gray-200 flex flex-col`}>
-            {/* Header */}
-            <div className="p-4 border-b border-gray-200">
-              <h1 className="text-2xl font-bold text-gray-800">Clients</h1>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">Client Communication</h2>
+          <p className="text-gray-600 mt-1">Chat with your clients in real-time</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-gray-500 bg-gray-50 px-4 py-2 rounded-2xl">
+            Company: {companyName}
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge className={`${
+              dbConnectionStatus.includes("Connected") 
+                ? "bg-green-50 text-green-700 border-green-200" 
+                : "bg-red-50 text-red-700 border-red-200"
+            } border`}>
+              <AlertCircle className="w-3 h-3 mr-1" />
+              {dbConnectionStatus}
+            </Badge>
+            {dbConnectionStatus.includes("failed") && (
+              <Button
+                onClick={retryConnection}
+                size="sm"
+                variant="outline"
+                className="h-6 px-2 border-gray-200 hover:bg-gray-50"
+              >
+                <RefreshCw className="w-3 h-3" />
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Client List */}
+        <Card className="lg:col-span-1 border-0 shadow-lg">
+          <CardHeader className="bg-[#e6f4fa] rounded-t-3xl">
+            <CardTitle className="text-[#00B2E2]">Clients</CardTitle>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Search clients..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 rounded-2xl border-gray-200 focus:border-[#00B2E2] focus:ring-[#00B2E2]"
+              />
             </div>
-            
-            {/* Search and Filter */}
-            <div className="p-4 border-b border-gray-200">
-              <div className="relative mb-3">
-                <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Search clients..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              
-              <div className="flex space-x-2 overflow-x-auto pb-2">
-                <button
-                  onClick={() => setFilterStatus('all')}
-                  className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${filterStatus === 'all' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => setFilterStatus('unread')}
-                  className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${filterStatus === 'unread' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}
-                >
-                  Unread
-                </button>
-                <button
-                  onClick={() => setFilterStatus('active')}
-                  className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${filterStatus === 'active' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}
-                >
-                  Active
-                </button>
-                <button
-                  onClick={() => setFilterStatus('away')}
-                  className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${filterStatus === 'away' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}
-                >
-                  Away
-                </button>
-                <button
-                  onClick={() => setFilterStatus('offline')}
-                  className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${filterStatus === 'offline' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}
-                >
-                  Offline
-                </button>
-              </div>
-            </div>
-            
-            {/* Client List */}
-            <div className="flex-1 overflow-y-auto">
-              {filteredClients.length > 0 ? (
-                filteredClients.map(client => (
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="space-y-1 max-h-96 overflow-y-auto p-4">
+              {filteredClients.length === 0 ? (
+                <div className="text-center text-gray-500 py-8">
+                  <div className="w-16 h-16 bg-[#e6f4fa] rounded-full flex items-center justify-center mx-auto mb-4">
+                    <User className="w-8 h-8 text-[#00B2E2]" />
+                  </div>
+                  <p className="text-gray-500">No clients found</p>
+                  <p className="text-gray-400 text-sm mt-1">Clients will appear here once they sign up</p>
+                </div>
+              ) : (
+                filteredClients.map((client) => (
                   <div
                     key={client.id}
-                    onClick={() => handleClientSelect(client)}
-                    className={`flex items-center p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${selectedClient?.id === client.id ? 'bg-blue-50' : ''}`}
+                    onClick={() => setSelectedClient(client)}
+                    className={`p-4 rounded-2xl cursor-pointer transition-all duration-200 ${
+                      selectedClient?.id === client.id
+                        ? 'bg-[#00B2E2] text-white shadow-lg'
+                        : 'hover:bg-[#e6f4fa] hover:text-[#00B2E2]'
+                    }`}
                   >
-                    <div className="relative mr-3">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg ${
+                        selectedClient?.id === client.id
+                          ? 'bg-white text-[#00B2E2]'
+                          : 'bg-[#e6f4fa] text-[#00B2E2]'
+                      }`}>
                         {client.avatar}
                       </div>
-                      <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${getStatusColor(client.status)}`}></div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className={`font-semibold truncate ${
+                          selectedClient?.id === client.id ? 'text-white' : 'text-gray-800'
+                        }`}>{client.name}</h4>
+                        <p className={`text-sm truncate ${
+                          selectedClient?.id === client.id ? 'text-blue-100' : 'text-gray-500'
+                        }`}>{client.email}</p>
+                        <p className={`text-xs ${
+                          selectedClient?.id === client.id ? 'text-blue-100' : 'text-gray-400'
+                        }`}>{client.lastMessage}</p>
+                      </div>
+                      <Badge className={client.status === 'active' 
+                        ? (selectedClient?.id === client.id 
+                          ? 'bg-white text-[#00B2E2]' 
+                          : 'bg-green-50 text-green-700 border-green-200')
+                        : 'bg-gray-50 text-gray-700 border-gray-200'
+                      }>
+                        {client.status}
+                      </Badge>
                     </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-center">
-                        <h3 className="font-medium text-gray-900 truncate">{client.name}</h3>
-                        <span className="text-xs text-gray-500 whitespace-nowrap ml-2">{client.lastMessageTime}</span>
-                      </div>
-                      <p className="text-sm text-gray-500 truncate">{client.lastMessage}</p>
-                      <div className="flex items-center mt-1">
-                        <span className="text-xs text-gray-400">{client.company}</span>
-                      </div>
-                    </div>
-                    
-                    {client.unread > 0 && (
-                      <div className="ml-2 w-5 h-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">
-                        {client.unread}
-                      </div>
-                    )}
-                    
-                    <ChevronRight className="w-5 h-5 text-gray-400 ml-2" />
                   </div>
                 ))
-              ) : (
-                <div className="p-8 text-center text-gray-500">
-                  <MessageSquare className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                  <p>No clients found</p>
-                </div>
               )}
             </div>
-          </div>
-          
-          {/* Chat Area */}
-          <div className={`${isMobileView && !selectedClient ? 'hidden' : 'flex'} flex-col flex-1`}>
+          </CardContent>
+        </Card>
+
+        {/* Chat Area */}
+        <Card className="lg:col-span-2 h-[600px] flex flex-col border-0 shadow-lg">
+          <CardHeader className="border-b border-gray-100 bg-[#e6f4fa] rounded-t-3xl">
+            <CardTitle className="text-[#00B2E2]">
+              {selectedClient ? `Chat with ${selectedClient.name}` : 'Select a client to start chatting'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 p-0 flex flex-col">
             {selectedClient ? (
               <>
-                {/* Chat Header */}
-                <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-                  <div className="flex items-center">
-                    {isMobileView && (
-                      <button 
-                        onClick={() => setSelectedClient(null)}
-                        className="mr-2 p-1 rounded-full hover:bg-gray-100"
-                      >
-                        <ChevronRight className="w-5 h-5 transform rotate-180" />
-                      </button>
-                    )}
-                    <div className="relative mr-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
-                        {selectedClient.avatar}
-                      </div>
-                      <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${getStatusColor(selectedClient.status)}`}></div>
-                    </div>
-                    <div>
-                      <h2 className="font-semibold text-gray-900">{selectedClient.name}</h2>
-                      <p className="text-sm text-gray-500">{selectedClient.company}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    
-                    <button className="p-2 rounded-full hover:bg-gray-100">
-                      <MoreVertical className="w-5 h-5 text-gray-600" />
-                    </button>
-                  </div>
-                </div>
-                
                 {/* Messages */}
-                <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
-                  <div className="space-y-3">
-                    {messages[selectedClient.id]?.map((message, index) => (
+                <div className="flex-1 p-6 overflow-y-auto max-h-[400px] bg-gray-50">
+                  <div className="space-y-4">
+                    {selectedClientMessages.map((message) => (
                       <div
-                        key={index}
-                        className={`flex ${message.sender === 'you' ? 'justify-end' : 'justify-start'}`}
+                        key={message.id}
+                        className={`flex ${message.sender === 'company' ? 'justify-end' : 'justify-start'}`}
                       >
                         <div
-                          className={`max-w-xs md:max-w-md lg:max-w-lg rounded-lg p-3 ${message.sender === 'you' ? 'bg-blue-500 text-white' : 'bg-white border border-gray-200'}`}
+                          className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-lg ${
+                            message.sender === 'company'
+                              ? 'bg-[#00B2E2] text-white'
+                              : 'bg-white text-gray-800 border border-gray-200'
+                          }`}
                         >
-                          <p>{message.text}</p>
-                          <div className={`flex items-center justify-end mt-1 text-xs ${message.sender === 'you' ? 'text-blue-100' : 'text-gray-500'}`}>
-                            {message.time}
-                            {message.sender === 'you' && message.read && (
-                              <Check className="w-3 h-3 ml-1" />
-                            )}
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-xs font-medium">
+                              {message.sender === 'company' ? companyName : selectedClient.name}
+                            </span>
+                            <span className={`text-xs ${
+                              message.sender === 'company' ? 'text-blue-100' : 'text-gray-500'
+                            }`}>
+                              {message.time}
+                            </span>
                           </div>
+                          <p className="text-sm leading-relaxed">{message.text}</p>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
-                
+
                 {/* Message Input */}
-                <div className="p-4 border-t border-gray-200 bg-white">
-                  <div className="flex items-center">
-                    <button className="p-2 text-gray-500 hover:text-gray-700">
-                      <Paperclip className="w-5 h-5" />
-                    </button>
-                    <button className="p-2 text-gray-500 hover:text-gray-700">
-                      <Smile className="w-5 h-5" />
-                    </button>
-                    <input
-                      type="text"
+                <div className="border-t border-gray-100 p-6 bg-white">
+                  <div className="flex gap-3">
+                    <Input
                       value={messageText}
                       onChange={(e) => setMessageText(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                      placeholder="Type a message..."
-                      className="flex-1 mx-2 px-3 py-2 bg-gray-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Type your message..."
+                      onKeyPress={handleKeyPress}
+                      className="flex-1 rounded-2xl border-gray-200 focus:border-[#00B2E2] focus:ring-[#00B2E2]"
                     />
-                    <button
+                    <Button
                       onClick={handleSendMessage}
                       disabled={!messageText.trim()}
-                      className={`p-2 rounded-full ${messageText.trim() ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-200 text-gray-400'}`}
+                      className="bg-[#00B2E2] hover:bg-[#0091c2] text-white px-6 py-2 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50"
                     >
-                      <Send className="w-5 h-5" />
-                    </button>
+                      <Send className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-                <MessageSquare className="w-16 h-16 text-gray-300 mb-4" />
-                <h3 className="text-xl font-medium text-gray-700 mb-2">Select a client to chat</h3>
-                <p className="text-gray-500 max-w-md">
-                  Choose a client from the list to view your conversation history or start a new conversation.
-                </p>
+              <div className="flex-1 flex items-center justify-center bg-gray-50">
+                <div className="text-center text-gray-500">
+                  <div className="w-16 h-16 bg-[#e6f4fa] rounded-full flex items-center justify-center mx-auto mb-4">
+                    <MessageSquare className="w-8 h-8 text-[#00B2E2]" />
+                  </div>
+                  <p className="text-gray-600 font-medium">Select a client from the list</p>
+                  <p className="text-gray-400 text-sm mt-1">to start chatting</p>
+                </div>
               </div>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

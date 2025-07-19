@@ -1,26 +1,47 @@
 "use client";
 
 import React, { useState } from "react";
-import { HiOutlineClipboardList, HiOutlineUserCircle, HiOutlineMail, HiOutlineChartBar, HiOutlineBell, HiOutlineUsers, HiOutlineLogout } from "react-icons/hi";
+import {
+  HiOutlineClipboardList,
+  HiOutlineUserCircle,
+  HiOutlineMail,
+  HiOutlineChartBar,
+  HiOutlineBell,
+  HiOutlineLogout,
+} from "react-icons/hi";
 import { auth } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import ClientManagement from "./ClientManagement";
-import ManageProjects from "./ManageProjects";
-import Timeline from "./Timeline";
-import TicketRaising from "./TicketRaising";
-import Chat from "./Chat";
+import TicketRaise from "./TicketRaise";
+import TimelineTracker from "./TimelineTracker";
+import UpdatesPage from "./UpdatesPage";
+import ClientCompanyChat from "./ClientCompanyChat";
 
 const sections = [
-  { key: "Client Management", label: "Client Management", icon: <HiOutlineUsers size={22} /> },
-  { key: "Manage Projects", label: "Manage Projects", icon: <HiOutlineClipboardList size={22} /> },
-  { key: "Timeline", label: "Timeline", icon: <HiOutlineChartBar size={22} /> },
-  { key: "Ticket Raising", label: "Ticket Raising", icon: <HiOutlineBell size={22} /> },
-  { key: "Chat", label: "Chat", icon: <HiOutlineMail size={22} /> },
+  {
+    key: "Tickets",
+    label: "Tickets",
+    icon: <HiOutlineClipboardList size={22} />,
+  },
+  {
+    key: "Timeline",
+    label: "Timeline",
+    icon: <HiOutlineChartBar size={22} />,
+  },
+  {
+    key: "Updates",
+    label: "Updates",
+    icon: <HiOutlineBell size={22} />,
+  },
+  {
+    key: "Chat",
+    label: "Chat",
+    icon: <HiOutlineMail size={22} />,
+  },
 ];
 
-export default function Dashboard() {
-  const [activeSection, setActiveSection] = useState("Client Management");
+export default function ClientDashboardPage() {
+  const [activeSection, setActiveSection] = useState("Tickets");
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -35,16 +56,14 @@ export default function Dashboard() {
 
   const renderSection = () => {
     switch (activeSection) {
-      case "Client Management":
-        return <ClientManagement />;
-      case "Manage Projects":
-        return <ManageProjects />;
+      case "Tickets":
+        return <TicketRaise />;
       case "Timeline":
-        return <Timeline />;
-      case "Ticket Raising":
-        return <TicketRaising />;
+        return <TimelineTracker />;
+      case "Updates":
+        return <UpdatesPage />;
       case "Chat":
-        return <Chat />;
+        return <ClientCompanyChat />;
       default:
         return null;
     }
@@ -62,7 +81,7 @@ export default function Dashboard() {
               <span className="text-2xl font-bold text-gray-800">
                 SyncWise
               </span>
-              <p className="text-sm text-gray-500">Company Panel</p>
+              <p className="text-sm text-gray-500">Client Panel</p>
             </div>
           </div>
           <nav className="flex flex-col gap-3">
@@ -100,7 +119,7 @@ export default function Dashboard() {
         <div className="max-w-6xl mx-auto">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-800 mb-2">{activeSection}</h1>
-            <p className="text-gray-600">Manage your {activeSection.toLowerCase()} efficiently</p>
+            <p className="text-gray-600">Access your {activeSection.toLowerCase()} and updates</p>
           </div>
           <div className="bg-white rounded-3xl shadow-lg p-8">
             {renderSection()}
@@ -109,4 +128,4 @@ export default function Dashboard() {
       </main>
     </div>
   );
-}
+} 

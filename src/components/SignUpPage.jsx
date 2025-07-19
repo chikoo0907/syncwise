@@ -24,6 +24,7 @@ export default function SignupPage() {
     email: "",
     password: "",
     clientName: "",
+    clientCompanyName: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -39,6 +40,7 @@ export default function SignupPage() {
       email: "",
       password: "",
       clientName: "",
+      clientCompanyName: "",
     });
     setError("");
   };
@@ -74,8 +76,15 @@ export default function SignupPage() {
           email,
           displayName,
           clientName: form.clientName,
+          companyName: form.clientCompanyName,
           createdAt: new Date(),
         });
+      }
+      // Redirect based on user type
+      if (userType === "company") {
+        router.push("/dashboard");
+      } else {
+        router.push("/client");
       }
       // Optionally, redirect or show success
       alert("Signup successful!");
@@ -84,6 +93,7 @@ export default function SignupPage() {
         email: "",
         password: "",
         clientName: "",
+        clientCompanyName: "",
       });
     } catch (err) {
       setError(err.message || "Signup failed");
@@ -191,6 +201,15 @@ export default function SignupPage() {
                       placeholder="Name"
                       name="clientName"
                       value={form.clientName}
+                      onChange={handleChange}
+                      className="h-12 rounded-3xl focus:border-[#00B2E2] focus:ring-2 focus:ring-[#00B2E2] border border-gray-300"
+                    />
+                  </div>
+                  <div className="space-y-2 w-[400px]">
+                    <Input
+                      placeholder="Company Name"
+                      name="clientCompanyName"
+                      value={form.clientCompanyName}
                       onChange={handleChange}
                       className="h-12 rounded-3xl focus:border-[#00B2E2] focus:ring-2 focus:ring-[#00B2E2] border border-gray-300"
                     />

@@ -12,8 +12,10 @@ import {
   import { Button } from "@/components/ui/button";
   import { Separator } from "@/components/ui/separator";
   import React from "react";
-  import { auth } from "@/firebase";
+  import { auth, db } from "@/firebase";
   import { signInWithEmailAndPassword } from "firebase/auth";
+  import { doc, getDoc } from "firebase/firestore";
+  import { useRouter } from "next/navigation";
   
   export default function LoginPage() {
     const [form, setForm] = React.useState({
@@ -22,6 +24,7 @@ import {
     });
     const [loading, setLoading] = React.useState(false);
     const [error, setError] = React.useState("");
+    const router = useRouter();
 
     const handleChange = (e) => {
       setForm({ ...form, [e.target.name]: e.target.value });
@@ -32,9 +35,23 @@ import {
       setLoading(true);
       setError("");
       try {
-        await signInWithEmailAndPassword(auth, form.email, form.password);
-        // Optionally redirect or show success
-        alert("Login successful!");
+        const userCredential = await signInWithEmailAndPassword(auth, form.email, form.password);
+        const user = userCredential.user;
+        
+        // Check if user is a company or client
+        const companyDoc = await getDoc(doc(db, "companies", user.uid));
+        const clientDoc = await getDoc(doc(db, "clients", user.uid));
+        
+        if (companyDoc.exists()) {
+          // User is a company, redirect to dashboard
+          router.push("/dashboard");
+        } else if (clientDoc.exists()) {
+          // User is a client, redirect to client page
+          router.push("/client");
+        } else {
+          // User exists in auth but not in either collection
+          setError("User profile not found. Please contact support.");
+        }
       } catch (err) {
         setError(err.message || "Login failed");
       } finally {
@@ -109,7 +126,11 @@ import {
               </div> */}
               <p className="text-center text-sm">
                 Dont have an account?{" "}
-                <Button variant="link" className="p-0 h-auto text-blue-500">
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto text-blue-500"
+                  onClick={() => router.push("/signup")}
+                >
                   Sign up
                 </Button>
               </p>

@@ -1,319 +1,317 @@
-import React, { useState } from 'react';
-import { format, parseISO, isBefore } from 'date-fns';
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { auth, db } from "@/firebase";
+import { collection, query, where, getDocs, updateDoc, doc, orderBy } from "firebase/firestore";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { 
+  MessageSquare, 
+  Clock, 
+  CheckCircle, 
+  AlertCircle, 
+  User,
+  Calendar,
+  Search
+} from 'lucide-react';
 
 export default function TicketRaising() {
-  // State for events with more detailed data
-  const [events, setEvents] = useState([
-    { 
-      id: 1, 
-      title: 'AI Webinar: Future of Machine Learning', 
-      date: '2024-06-10', 
-      status: 'Approved',
-      attendees: 45,
-      description: 'A comprehensive webinar about emerging trends in AI and ML technologies.'
-    },
-    { 
-      id: 2, 
-      title: 'Data Science Seminar: Big Data Analytics', 
-      date: '2024-06-15', 
-      status: 'Pending Approval',
-      attendees: 0,
-      description: 'Learn how to process and analyze large datasets effectively.'
-    },
-    { 
-      id: 3, 
-      title: 'Machine Learning Fundamentals Course', 
-      date: '2024-05-01', 
-      status: 'Expired',
-      attendees: 32,
-      description: 'Beginner-friendly introduction to core ML concepts and algorithms.'
-    },
-    {
-      id: 4,
-      title: 'Cloud Computing Workshop',
-      date: '2024-07-20',
-      status: 'Draft',
-      attendees: 0,
-      description: 'Hands-on workshop for deploying applications on cloud platforms.'
-    }
-  ]);
-
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [showModal, setShowModal] = useState(false);
+  const [tickets, setTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [companyName, setCompanyName] = useState("");
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('all');
 
-  // Format date to be more readable
-  const formatDate = (dateString) => {
-    return format(parseISO(dateString), 'MMM dd, yyyy');
+  useEffect(() => {
+    fetchTickets();
+  }, []);
+
+  const fetchTickets = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      // Get company name from companies collection
+      const companyDoc = await getDocs(collection(db, "companies"));
+      const companyData = companyDoc.docs.find(doc => doc.id === user.uid)?.data();
+      
+      if (companyData) {
+        setCompanyName(companyData.companyName);
+        
+        // Fetch all tickets for this company (removed orderBy to avoid index issues)
+        const ticketsQuery = query(
+          collection(db, "tickets"),
+          where("companyName", "==", companyData.companyName)
+        );
+        
+        const ticketsSnapshot = await getDocs(ticketsQuery);
+        const ticketsList = ticketsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        // Sort locally instead of in query
+        ticketsList.sort((a, b) => {
+          const dateA = a.createdAt?.toDate?.() || new Date(a.createdAt) || new Date(0);
+          const dateB = b.createdAt?.toDate?.() || new Date(b.createdAt) || new Date(0);
+          return dateB - dateA;
+        });
+        
+        setTickets(ticketsList);
+      }
+    } catch (error) {
+      console.error("Error fetching tickets:", error);
+      // Don't throw error, just log it
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Check if event is in the past
-  const isPastEvent = (dateString) => {
-    return isBefore(parseISO(dateString), new Date());
+  const updateTicketStatus = async (ticketId, newStatus) => {
+    try {
+      await updateDoc(doc(db, "tickets", ticketId), {
+        status: newStatus,
+        updatedAt: new Date()
+      });
+      
+      // Update local state
+      setTickets(tickets.map(ticket => 
+        ticket.id === ticketId 
+          ? { ...ticket, status: newStatus, updatedAt: new Date() }
+          : ticket
+      ));
+      
+      alert("Ticket status updated successfully!");
+    } catch (error) {
+      console.error("Error updating ticket status:", error);
+      alert("Failed to update ticket status");
+    }
   };
 
-  // Filter events based on search and status filter
-  const filteredEvents = events.filter(event => {
-    const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         event.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || event.status === statusFilter;
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "open":
+        return "bg-red-100 text-red-800";
+      case "in-progress":
+        return "bg-yellow-100 text-yellow-800";
+      case "resolved":
+        return "bg-green-100 text-green-800";
+      case "closed":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case "open":
+        return <AlertCircle className="w-5 h-5 text-red-600" />;
+      case "in-progress":
+        return <Clock className="w-5 h-5 text-yellow-600" />;
+      case "resolved":
+        return <CheckCircle className="w-5 h-5 text-green-600" />;
+      case "closed":
+        return <MessageSquare className="w-5 h-5 text-gray-600" />;
+      default:
+        return <MessageSquare className="w-5 h-5 text-gray-600" />;
+    }
+  };
+
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case "high":
+        return "bg-red-100 text-red-800";
+      case "medium":
+        return "bg-yellow-100 text-yellow-800";
+      case "low":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  // Calculate statistics
+  const totalTickets = tickets.length;
+  const openTickets = tickets.filter(t => t.status === "open").length;
+  const inProgressTickets = tickets.filter(t => t.status === "in-progress").length;
+  const resolvedTickets = tickets.filter(t => t.status === "resolved").length;
+
+  const stats = [
+    { 
+      label: 'Total Tickets', 
+      value: totalTickets, 
+      icon: MessageSquare,
+      color: 'from-blue-500 to-cyan-500',
+      bgColor: 'bg-blue-50 hover:bg-blue-100',
+      textColor: 'text-blue-600'
+    },
+    { 
+      label: 'Open', 
+      value: openTickets, 
+      icon: AlertCircle,
+      color: 'from-red-500 to-pink-500',
+      bgColor: 'bg-red-50 hover:bg-red-100',
+      textColor: 'text-red-600'
+    },
+    { 
+      label: 'In Progress', 
+      value: inProgressTickets, 
+      icon: Clock,
+      color: 'from-yellow-500 to-orange-500',
+      bgColor: 'bg-yellow-50 hover:bg-yellow-100',
+      textColor: 'text-yellow-600'
+    },
+    { 
+      label: 'Resolved', 
+      value: resolvedTickets, 
+      icon: CheckCircle,
+      color: 'from-green-500 to-emerald-500',
+      bgColor: 'bg-green-50 hover:bg-green-100',
+      textColor: 'text-green-600'
+    },
+  ];
+
+  // Filter tickets
+  const filteredTickets = tickets.filter(ticket => {
+    const matchesSearch = ticket.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         ticket.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         ticket.clientName?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  // Handle delete event
-  const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this event?')) {
-      setEvents(events.filter(event => event.id !== id));
-    }
-  };
-
-  // Handle archive event
-  const handleArchive = (id) => {
-    setEvents(events.map(event => 
-      event.id === id ? { ...event, status: 'Archived' } : event
-    ));
-  };
-
-  // Status badge component
-  const StatusBadge = ({ status }) => {
-    const statusColors = {
-      'Approved': 'bg-green-100 text-green-800',
-      'Pending Approval': 'bg-yellow-100 text-yellow-800',
-      'Expired': 'bg-red-100 text-red-800',
-      'Draft': 'bg-gray-100 text-gray-800',
-      'Archived': 'bg-purple-100 text-purple-800'
-    };
-    
+  if (loading) {
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[status] || 'bg-gray-100'}`}>
-        {status}
-      </span>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg">Loading tickets...</div>
+      </div>
     );
-  };
+  }
 
   return (
-    <div className="max-w-6xl mx-auto bg-white p-8 rounded-lg shadow-lg">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Event Management</h1>
-        <button 
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          onClick={() => setShowModal(true)}
-        >
-          Create New Event
-        </button>
-      </div>
-
-      {/* Filters and Search */}
-      <div className="flex flex-col md:flex-row justify-between mb-6 gap-4">
-        <div className="relative w-full md:w-64">
-          <input
-            type="text"
-            placeholder="Search events..."
-            className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <svg
-            className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-800">Ticket Management</h2>
+        <div className="text-sm text-gray-600">
+          Company: {companyName}
         </div>
-        <select
-          className="w-full md:w-48 px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="All">All Statuses</option>
-          <option value="Approved">Approved</option>
-          <option value="Pending Approval">Pending Approval</option>
-          <option value="Draft">Draft</option>
-          <option value="Expired">Expired</option>
-          <option value="Archived">Archived</option>
-        </select>
       </div>
 
-      {/* Events Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full table-auto border-collapse">
-          <thead>
-            <tr className="bg-gray-50 text-left">
-              <th className="px-6 py-3 font-medium text-gray-700">Event Title</th>
-              <th className="px-6 py-3 font-medium text-gray-700">Date</th>
-              <th className="px-6 py-3 font-medium text-gray-700">Attendees</th>
-              <th className="px-6 py-3 font-medium text-gray-700">Status</th>
-              <th className="px-6 py-3 font-medium text-gray-700">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {filteredEvents.length > 0 ? (
-              filteredEvents.map((event) => (
-                <tr 
-                  key={event.id} 
-                  className={`hover:bg-gray-50 ${isPastEvent(event.date) ? 'text-gray-400' : ''}`}
-                >
-                  <td className="px-6 py-4">
-                    <div className="font-medium text-gray-900">{event.title}</div>
-                    <div className="text-sm text-gray-500 line-clamp-1">{event.description}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    {formatDate(event.date)}
-                    {isPastEvent(event.date) && (
-                      <span className="ml-2 text-xs text-red-500">(Past)</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <span>{event.attendees}</span>
-                      {event.status === 'Approved' && !isPastEvent(event.date) && (
-                        <button 
-                          className="ml-2 text-xs text-blue-600 hover:text-blue-800"
-                          onClick={() => alert('Promote event functionality would go here')}
-                        >
-                          Promote
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <StatusBadge status={event.status} />
-                  </td>
-                  <td className="px-6 py-4 space-x-2">
-                    <button 
-                      className="px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors text-sm"
-                      onClick={() => {
-                        setSelectedEvent(event);
-                        setShowModal(true);
-                      }}
-                    >
-                      View/Edit
-                    </button>
-                    <button 
-                      className="px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors text-sm"
-                      onClick={() => handleDelete(event.id)}
-                    >
-                      Delete
-                    </button>
-                    {event.status === 'Expired' && (
-                      <button 
-                        className="px-3 py-1 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors text-sm"
-                        onClick={() => handleArchive(event.id)}
-                      >
-                        Archive
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
-                  No events found matching your criteria
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Event Details Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-800">
-                  {selectedEvent ? 'Edit Event' : 'Create New Event'}
-                </h2>
-                <button 
-                  className="text-gray-500 hover:text-gray-700"
-                  onClick={() => {
-                    setShowModal(false);
-                    setSelectedEvent(null);
-                  }}
-                >
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {stats.map((stat, idx) => {
+          const Icon = stat.icon;
+          return (
+            <div
+              key={idx}
+              className={`${stat.bgColor} backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer group`}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className={`p-3 rounded-xl bg-gradient-to-r ${stat.color} shadow-lg`}>
+                  <Icon className="w-6 h-6 text-white" />
+                </div>
               </div>
               
-              <form>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Event Title</label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      defaultValue={selectedEvent?.title || ''}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                      <input
-                        type="date"
-                        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        defaultValue={selectedEvent?.date || ''}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                      <select
-                        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        defaultValue={selectedEvent?.status || 'Draft'}
-                      >
-                        <option value="Draft">Draft</option>
-                        <option value="Pending Approval">Pending Approval</option>
-                        <option value="Approved">Approved</option>
-                      </select>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                    <textarea
-                      rows={4}
-                      className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      defaultValue={selectedEvent?.description || ''}
-                    />
-                  </div>
+              <div className="space-y-2">
+                <div className={`text-3xl font-bold ${stat.textColor} group-hover:scale-105 transition-transform duration-200`}>
+                  {stat.value}
                 </div>
-                
-                <div className="flex justify-end space-x-3 mt-6">
-                  <button
-                    type="button"
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-                    onClick={() => {
-                      setShowModal(false);
-                      setSelectedEvent(null);
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                  >
-                    {selectedEvent ? 'Update Event' : 'Create Event'}
-                  </button>
+                <div className="text-slate-600 font-medium">
+                  {stat.label}
                 </div>
-              </form>
+              </div>
             </div>
+          );
+        })}
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Support Tickets</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Search tickets..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">All Status</option>
+              <option value="open">Open</option>
+              <option value="in-progress">In Progress</option>
+              <option value="resolved">Resolved</option>
+              <option value="closed">Closed</option>
+            </select>
           </div>
-        </div>
-      )}
+
+          {filteredTickets.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">
+              <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+              <p>No tickets found.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredTickets.map((ticket) => (
+                <Card key={ticket.id} className="hover:shadow-lg transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          {getStatusIcon(ticket.status)}
+                          <h3 className="text-lg font-semibold">{ticket.title}</h3>
+                          <Badge className={getStatusColor(ticket.status)}>
+                            {ticket.status}
+                          </Badge>
+                          <Badge className={getPriorityColor(ticket.priority)}>
+                            {ticket.priority}
+                          </Badge>
+                        </div>
+                        <p className="text-gray-600 mb-3">{ticket.description}</p>
+                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                          <div className="flex items-center gap-1">
+                            <User className="w-4 h-4" />
+                            <span>{ticket.clientName}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            <span>{ticket.createdAt?.toDate().toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <select
+                          value={ticket.status}
+                          onChange={(e) => updateTicketStatus(ticket.id, e.target.value)}
+                          className="p-2 border border-gray-300 rounded text-sm"
+                        >
+                          <option value="open">Open</option>
+                          <option value="in-progress">In Progress</option>
+                          <option value="resolved">Resolved</option>
+                          <option value="closed">Closed</option>
+                        </select>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

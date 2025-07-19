@@ -1,128 +1,390 @@
-"use client"
-import React, { useState } from "react";
+"use client";
 
+import React, { useState, useEffect } from "react";
+import { auth, db } from "@/firebase";
+import { collection, query, where, getDocs, addDoc, orderBy } from "firebase/firestore";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { safeSortByDate, handleFirebaseError } from "@/lib/utils";
+import { 
+  MessageSquare, 
+  Clock, 
+  CheckCircle, 
+  AlertCircle, 
+  User,
+  Calendar,
+  Plus,
+  FileText
+} from 'lucide-react';
 
-const RaiseTicketForm = () => {
-  const [formData, setFormData] = useState({
+export default function TicketRaise() {
+  const [tickets, setTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [clientName, setClientName] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [newTicket, setNewTicket] = useState({
     subject: "",
     category: "",
     description: "",
-    attachment: null,
+    priority: "medium"
   });
 
-  const handleChange = (e) => {
-    const { name, value, files } = e.target;
-    setFormData({
-      ...formData,
-      [name]: name === "attachment" ? files[0] : value,
-    });
-  };
+  useEffect(() => {
+    fetchClientAndTickets();
+  }, []);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Handle form submission (e.g., API call)
-    const ticketData = new FormData();
-    ticketData.append("subject", formData.subject);
-    ticketData.append("category", formData.category);
-    ticketData.append("description", formData.description);
-    if (formData.attachment) {
-      ticketData.append("attachment", formData.attachment);
+  const fetchClientAndTickets = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      // Get client data from clients collection
+      const clientDoc = await getDocs(collection(db, "clients"));
+      const clientData = clientDoc.docs.find(doc => doc.id === user.uid)?.data();
+      
+      if (clientData) {
+        setClientName(clientData.clientName);
+        setCompanyName(clientData.companyName);
+        
+        // Fetch all tickets for this client (removed orderBy to avoid index issues)
+        const ticketsQuery = query(
+          collection(db, "tickets"),
+          where("clientId", "==", user.uid)
+        );
+        
+        const ticketsSnapshot = await getDocs(ticketsQuery);
+        const ticketsList = ticketsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        // Use utility function for safe sorting
+        const sortedTickets = safeSortByDate(ticketsList, 'createdAt', false);
+        setTickets(sortedTickets);
+      }
+    } catch (error) {
+      handleFirebaseError(error, 'fetchClientAndTickets');
+    } finally {
+      setLoading(false);
     }
-
-    console.log("Submitting ticket:", Object.fromEntries(ticketData.entries()));
-    // You can send this to your backend with fetch or axios
   };
+
+  const handleSubmitTicket = async (e) => {
+    e.preventDefault();
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const ticketData = {
+        ...newTicket,
+        clientId: user.uid,
+        clientName: clientName,
+        companyName: companyName,
+        status: "open",
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      await addDoc(collection(db, "tickets"), ticketData);
+      
+      // Reset form
+      setNewTicket({
+        subject: "",
+        category: "",
+        description: "",
+        priority: "medium"
+      });
+      setShowForm(false);
+      
+      // Refresh tickets list
+      fetchClientAndTickets();
+      
+      alert("Ticket submitted successfully!");
+    } catch (error) {
+      console.error("Error submitting ticket:", error);
+      alert("Failed to submit ticket");
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "open":
+        return "bg-red-50 text-red-700 border-red-200";
+      case "in-progress":
+        return "bg-yellow-50 text-yellow-700 border-yellow-200";
+      case "resolved":
+        return "bg-green-50 text-green-700 border-green-200";
+      case "closed":
+        return "bg-gray-50 text-gray-700 border-gray-200";
+      default:
+        return "bg-gray-50 text-gray-700 border-gray-200";
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case "open":
+        return <AlertCircle className="w-5 h-5 text-red-600" />;
+      case "in-progress":
+        return <Clock className="w-5 h-5 text-yellow-600" />;
+      case "resolved":
+        return <CheckCircle className="w-5 h-5 text-green-600" />;
+      case "closed":
+        return <MessageSquare className="w-5 h-5 text-gray-600" />;
+      default:
+        return <MessageSquare className="w-5 h-5 text-gray-600" />;
+    }
+  };
+
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case "high":
+        return "bg-red-50 text-red-700 border-red-200";
+      case "medium":
+        return "bg-yellow-50 text-yellow-700 border-yellow-200";
+      case "low":
+        return "bg-green-50 text-green-700 border-green-200";
+      default:
+        return "bg-gray-50 text-gray-700 border-gray-200";
+    }
+  };
+
+  // Calculate statistics
+  const totalTickets = tickets.length;
+  const openTickets = tickets.filter(t => t.status === "open").length;
+  const inProgressTickets = tickets.filter(t => t.status === "in-progress").length;
+  const resolvedTickets = tickets.filter(t => t.status === "resolved").length;
+
+  const stats = [
+    { 
+      label: 'Total Tickets', 
+      value: totalTickets, 
+      icon: MessageSquare,
+      color: 'from-[#00B2E2] to-[#0091c2]',
+      bgColor: 'bg-[#e6f4fa] hover:bg-[#d1eef7]',
+      textColor: 'text-[#00B2E2]'
+    },
+    { 
+      label: 'Open', 
+      value: openTickets, 
+      icon: AlertCircle,
+      color: 'from-red-500 to-pink-500',
+      bgColor: 'bg-red-50 hover:bg-red-100',
+      textColor: 'text-red-600'
+    },
+    { 
+      label: 'In Progress', 
+      value: inProgressTickets, 
+      icon: Clock,
+      color: 'from-yellow-500 to-orange-500',
+      bgColor: 'bg-yellow-50 hover:bg-yellow-100',
+      textColor: 'text-yellow-600'
+    },
+    { 
+      label: 'Resolved', 
+      value: resolvedTickets, 
+      icon: CheckCircle,
+      color: 'from-green-500 to-emerald-500',
+      bgColor: 'bg-green-50 hover:bg-green-100',
+      textColor: 'text-green-600'
+    },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg text-gray-600">Loading tickets...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="ticket-form-container">
-      <h2>Raise a Support Ticket</h2>
-      <form onSubmit={handleSubmit} className="ticket-form">
-        <label>Subject</label>
-        <input
-          type="text"
-          name="subject"
-          placeholder="Enter issue title"
-          value={formData.subject}
-          onChange={handleChange}
-          required
-        />
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">Support Tickets</h2>
+          <p className="text-gray-600 mt-1">Submit and track your support requests</p>
+        </div>
+        <div className="text-sm text-gray-500 bg-gray-50 px-4 py-2 rounded-2xl">
+          {clientName} | {companyName}
+        </div>
+      </div>
 
-        <label>Category</label>
-        <select
-          name="category"
-          value={formData.category}
-          onChange={handleChange}
-          required
-        >
-          <option value="">-- Select Category --</option>
-          <option value="bug">Bug / Error</option>
-          <option value="feature">Feature Request</option>
-          <option value="query">General Query</option>
-        </select>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {stats.map((stat, idx) => {
+          const Icon = stat.icon;
+          return (
+            <div
+              key={idx}
+              className={`${stat.bgColor} rounded-3xl p-6 border border-white shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer group`}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className={`p-3 rounded-2xl bg-gradient-to-r ${stat.color} shadow-lg`}>
+                  <Icon className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className={`text-3xl font-bold ${stat.textColor} group-hover:scale-105 transition-transform duration-200`}>
+                  {stat.value}
+                </div>
+                <div className="text-gray-600 font-medium">
+                  {stat.label}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
-        <label>Description</label>
-        <textarea
-          name="description"
-          rows="5"
-          placeholder="Describe the issue in detail..."
-          value={formData.description}
-          onChange={handleChange}
-          required
-        />
+      {/* Raise New Ticket */}
+      <Card className="border-0 shadow-lg">
+        <CardHeader className="bg-[#e6f4fa] rounded-t-3xl">
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-[#00B2E2]">Raise New Ticket</CardTitle>
+            <Button 
+              onClick={() => setShowForm(!showForm)}
+              className="bg-[#00B2E2] hover:bg-[#0091c2] text-white px-6 py-2 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              {showForm ? 'Cancel' : 'New Ticket'}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6">
+          {showForm && (
+            <form onSubmit={handleSubmitTicket} className="space-y-6 p-6 border border-gray-100 rounded-3xl bg-gray-50">
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">Subject</label>
+                <Input
+                  value={newTicket.subject}
+                  onChange={(e) => setNewTicket({...newTicket, subject: e.target.value})}
+                  placeholder="Enter issue title"
+                  className="rounded-2xl border-gray-200 focus:border-[#00B2E2] focus:ring-[#00B2E2]"
+                  required
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">Category</label>
+                  <select
+                    value={newTicket.category}
+                    onChange={(e) => setNewTicket({...newTicket, category: e.target.value})}
+                    className="w-full p-4 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#00B2E2] focus:border-[#00B2E2] bg-white"
+                    required
+                  >
+                    <option value="">-- Select Category --</option>
+                    <option value="bug">Bug / Error</option>
+                    <option value="feature">Feature Request</option>
+                    <option value="query">General Query</option>
+                    <option value="billing">Billing Issue</option>
+                    <option value="technical">Technical Support</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">Priority</label>
+                  <select
+                    value={newTicket.priority}
+                    onChange={(e) => setNewTicket({...newTicket, priority: e.target.value})}
+                    className="w-full p-4 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#00B2E2] focus:border-[#00B2E2] bg-white"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">Description</label>
+                <textarea
+                  value={newTicket.description}
+                  onChange={(e) => setNewTicket({...newTicket, description: e.target.value})}
+                  placeholder="Describe your issue in detail..."
+                  className="w-full p-4 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-[#00B2E2] focus:border-[#00B2E2] resize-none bg-white"
+                  rows="4"
+                  required
+                />
+              </div>
+              
+              <div className="flex gap-3 pt-4">
+                <Button 
+                  type="submit"
+                  className="bg-[#00B2E2] hover:bg-[#0091c2] text-white px-6 py-2 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Submit Ticket
+                </Button>
+                <Button 
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowForm(false)}
+                  className="border-gray-200 text-gray-600 hover:bg-gray-50 px-6 py-2 rounded-2xl"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          )}
+        </CardContent>
+      </Card>
 
-        <label>Attach File (optional)</label>
-        <input
-          type="file"
-          name="attachment"
-          onChange={handleChange}
-        />
-
-        <button type="submit">Submit Ticket</button>
-      </form>
-
-      <style jsx>{`
-        .ticket-form-container {
-          max-width: 500px;
-          margin: auto;
-          background: #f7f9fc;
-          padding: 20px;
-          border-radius: 10px;
-          box-shadow: 0 0 10px #ddd;
-        }
-        h2 {
-          text-align: center;
-          margin-bottom: 20px;
-        }
-        .ticket-form label {
-          display: block;
-          margin-top: 15px;
-          font-weight: bold;
-        }
-        .ticket-form input[type="text"],
-        .ticket-form select,
-        .ticket-form textarea,
-        .ticket-form input[type="file"] {
-          width: 100%;
-          padding: 10px;
-          margin-top: 5px;
-          border: 1px solid #ccc;
-          border-radius: 6px;
-        }
-        .ticket-form button {
-          margin-top: 20px;
-          padding: 10px 20px;
-          background-color: #0070f3;
-          color: white;
-          border: none;
-          border-radius: 6px;
-          cursor: pointer;
-        }
-        .ticket-form button:hover {
-          background-color: #005ac1;
-        }
-      `}</style>
+      {/* Tickets List */}
+      <div>
+        <h3 className="text-lg font-semibold mb-4 text-gray-800">Your Tickets</h3>
+        {tickets.length === 0 ? (
+          <Card className="border-0 shadow-lg">
+            <CardContent className="p-8">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-[#e6f4fa] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <MessageSquare className="w-8 h-8 text-[#00B2E2]" />
+                </div>
+                <p className="text-gray-500 text-lg">No tickets found.</p>
+                <p className="text-gray-400 text-sm mt-1">Create your first support ticket above.</p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {tickets.map((ticket) => (
+              <Card key={ticket.id} className="border-0 shadow-lg hover:shadow-xl transition-all duration-200">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h4 className="font-semibold text-lg text-gray-800">{ticket.subject}</h4>
+                        <Badge className={`${getStatusColor(ticket.status)} border`}>
+                          {getStatusIcon(ticket.status)}
+                          <span className="ml-1 capitalize">{ticket.status}</span>
+                        </Badge>
+                        <Badge className={`${getPriorityColor(ticket.priority)} border`}>
+                          {ticket.priority} Priority
+                        </Badge>
+                      </div>
+                      <p className="text-gray-600 mb-3">{ticket.description}</p>
+                      <div className="flex items-center gap-4 text-sm text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          {ticket.createdAt?.toDate?.()?.toLocaleDateString() || new Date(ticket.createdAt).toLocaleDateString()}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <User className="w-4 h-4" />
+                          {ticket.category}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
-};
-
-export default RaiseTicketForm;
+}
