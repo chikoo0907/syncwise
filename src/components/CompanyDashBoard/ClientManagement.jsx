@@ -357,7 +357,7 @@ export default function ClientManagement() {
 
           {showAddProject && (
             <Card className="mb-6 border-0 shadow-lg">
-              <CardHeader className="bg-[#e6f4fa] rounded-t-3xl">
+              <CardHeader className="">
                 <CardTitle className="text-[#00B2E2]">
                   Add New Project
                 </CardTitle>

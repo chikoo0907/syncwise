@@ -149,12 +149,14 @@ export default function TicketRaising() {
   const getStatusColor = (status) => {
     switch (status) {
       case "open":
-        return "bg-red-100 text-red-800";
+        return "bg-[#e0eef5] text-[#1e396b]";
       case "in-progress":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-[#496c9c] text-[#ffffff]";
       case "resolved":
-      case "closed":
-        return "bg-green-100 text-green-800";
+      case "close":
+        return "bg-[#1e396b] text-[#e0eef5]";
+      case "cancelled":
+        return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -163,12 +165,12 @@ export default function TicketRaising() {
   const getStatusIcon = (status) => {
     switch (status) {
       case "open":
-        return <AlertCircle className="w-5 h-5 text-red-600" />;
+        return <AlertCircle className="w-5 h-5 bg-[#e0eef5] text-[#1e396b]" />;
       case "in-progress":
-        return <Clock className="w-5 h-5 text-yellow-600" />;
+        return <Clock className="w-5 h-5 bg-[#496c9c] text-[#ffffff]" />;
       case "resolved":
       case "closed":
-        return <CheckCircle className="w-5 h-5 text-green-600" />;
+        return <CheckCircle className="w-5 h-5 bg-[#1e396b] text-[#e0eef5]" />;
       default:
         return <MessageSquare className="w-5 h-5 text-gray-600" />;
     }

@@ -139,30 +139,31 @@ export default function TicketRaise() {
   const getStatusColor = (status) => {
     switch (status) {
       case "open":
-        return "bg-red-50 text-red-700 border-red-200";
+        return "bg-[#e0eef5] text-[#1e396b]";
       case "in-progress":
-        return "bg-yellow-50 text-yellow-700 border-yellow-200";
+        return "bg-bg-[#496c9c] text-[#ffffff]";
       case "resolved":
-        return "bg-green-50 text-green-700 border-green-200";
+        return "bg-[#1e396b] text-[#e0eef5] ";
       case "closed":
-        return "bg-gray-50 text-gray-700 border-gray-200";
+        return "bg-gray-50 text-gray-700 ";
       default:
-        return "bg-gray-50 text-gray-700 border-gray-200";
+        return "bg-gray-50 text-gray-700 ";
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
       case "open":
-        return <AlertCircle className="w-5 h-5 text-red-600" />;
+      // return <AlertCircle className="w-5 h-5 text-red-600" />;
       case "in-progress":
-        return <Clock className="w-5 h-5 text-yellow-600" />;
+      // return <Clock className="w-5 h-5 text-yellow-600" />;
       case "resolved":
-        return <CheckCircle className="w-5 h-5 text-green-600" />;
+      // return <CheckCircle className="w-5 h-5 text-green-600" />;
       case "closed":
-        return <MessageSquare className="w-5 h-5 text-gray-600" />;
+      // return <MessageSquare className="w-5 h-5 text-gray-600" />;
       default:
-        return <MessageSquare className="w-5 h-5 text-gray-600" />;
+        //     return <MessageSquare className="w-5 h-5 text-gray-600" />;
+        return;
     }
   };
 
@@ -231,6 +232,11 @@ export default function TicketRaise() {
         cell: (info) => info.getValue() || "-",
       },
       {
+        accessorKey: "description",
+        header: "Description",
+        cell: (info) => info.getValue() || "-",
+      },
+      {
         accessorKey: "status",
         header: "Status",
         cell: (info) => (
@@ -257,11 +263,7 @@ export default function TicketRaise() {
           </span>
         ),
       },
-      {
-        accessorKey: "description",
-        header: "Description",
-        cell: (info) => info.getValue() || "-",
-      },
+
       {
         accessorKey: "createdAt",
         header: "Created At",
