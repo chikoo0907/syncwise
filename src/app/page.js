@@ -3,13 +3,36 @@ import Head from "next/head";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { auth } from "@/firebase";
+import { db } from "@/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { useRouter } from "next/navigation";
+import Particles from "@/components/Particles";
+
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userType, setUserType] = useState(null); // "client" | "company" | null
+  const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
       setIsLoggedIn(!!user);
+      if (user) {
+        // Check Firestore for user type
+        const companyDoc = await getDoc(doc(db, "companies", user.uid));
+        if (companyDoc.exists()) {
+          setUserType("company");
+          return;
+        }
+        const clientDoc = await getDoc(doc(db, "clients", user.uid));
+        if (clientDoc.exists()) {
+          setUserType("client");
+          return;
+        }
+        setUserType(null);
+      } else {
+        setUserType(null);
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -46,12 +69,30 @@ export default function Home() {
               </Link>
             </div>
           ) : (
-            <button
-              onClick={handleLogout}
-              className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded"
-            >
-              Logout
-            </button>
+            <div className="flex items-center space-x-2">
+              {userType === "company" && (
+                <button
+                  onClick={() => router.push("/dashboard")}
+                  className="bg-[#00B2E2] hover:bg-[#496c9c] px-4 py-2 rounded-lg"
+                >
+                  Go to Dashboard
+                </button>
+              )}
+              {userType === "client" && (
+                <button
+                  onClick={() => router.push("/client")}
+                  className="bg-[#00B2E2] hover:bg-[#496c9c] px-4 py-2 rounded-lg"
+                >
+                  Go to Client Panel
+                </button>
+              )}
+              <button
+                onClick={handleLogout}
+                className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded"
+              >
+                Logout
+              </button>
+            </div>
           )}
         </div>
       </header>
@@ -59,21 +100,24 @@ export default function Home() {
       {/* Hero Section with Background Image and Overlay */}
       <section
         className="relative h-screen w-full bg-cover bg-center bg-fixed pt-[70px]"
-        style={{
-          backgroundImage: "url('/homepagebg.jpg')",
-        }}
+        // style={{
+        //   backgroundImage: "url('/image.png')",
+        // }}
       >
+        {/* Particles background */}
+        <div className="absolute top-0 left-0 w-full h-full z-0 pointer-events-none bg-blue-900">
+          <Particles particleCount={300} particleSpread={8} speed={0.15} particleColors={["#3b82f6", "#2563eb", "#1e40af"]} />
+        </div>
         {/* Dark gradient overlay */}
         <div
-          className="absolute top-0 right-0 w-full h-full"
+          className="absolute top-0 right-0 w-full h-full z-10"
           style={{
             background:
               "linear-gradient(to right, rgba(0,0,0,0.3), rgba(0,0,0,0.8))",
           }}
         />
-
         {/* Content */}
-        <div className="relative z-10 flex flex-col items-center justify-center text-center px-4 h-full text-white">
+        <div className="relative z-20 flex flex-col items-center justify-center text-center px-4 h-full text-white">
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
             Simplify Client Projects. Strengthen Collaboration.
           </h2>
