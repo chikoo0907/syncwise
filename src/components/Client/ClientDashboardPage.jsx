@@ -113,10 +113,9 @@ export default function ClientDashboardPage() {
               <button
                 key={section.key}
                 className={`flex items-center gap-3 px-6 py-2 rounded-2xl transition-all duration-200 font-medium text-lg focus:outline-none focus:ring-2 focus:ring-[#00B2E2] focus:ring-opacity-50
-                  ${
-                    activeSection === section.key
-                      ? "bg-[#00B2E2] text-white shadow-lg transform scale-105"
-                      : "hover:bg-[#e6f4fa] hover:text-[#00B2E2] text-gray-600"
+                  ${activeSection === section.key
+                    ? "bg-[#00B2E2] text-white shadow-lg transform scale-105"
+                    : "hover:bg-[#e6f4fa] hover:text-[#00B2E2] text-gray-600"
                   }`}
                 onClick={() => setActiveSection(section.key)}
               >

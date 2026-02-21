@@ -11,6 +11,8 @@ import {
   addDoc,
   onSnapshot,
   updateDoc,
+  doc,
+  getDoc,
 } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,15 +63,63 @@ export default function ClientCompanyChat() {
       if (!user) return;
 
       // Get client data from clients collection
-      const clientDoc = await getDocs(collection(db, "clients"));
-      const clientData = clientDoc.docs
-        .find((doc) => doc.id === user.uid)
-        ?.data();
-
-      if (clientData) {
-        setClientName(clientData.clientName);
-        setCompanyName(clientData.companyName);
+      const clientDocRef = doc(db, "clients", user.uid);
+      const clientDoc = await getDoc(clientDocRef);
+      
+      if (!clientDoc.exists()) {
+        console.error("Client document not found");
+        setLoading(false);
+        return;
       }
+
+      const clientData = clientDoc.data();
+      setClientName(clientData.clientName);
+      
+      // Get the actual company name from Firestore if companyName is a URL or if we have companyId
+      let finalCompanyName = clientData.companyName;
+      const companyId = clientData.companyId;
+      
+      // If companyName is a URL, extract companyId and fetch the real name
+      if (finalCompanyName && (finalCompanyName.startsWith("http://") || finalCompanyName.startsWith("https://"))) {
+        try {
+          const url = new URL(finalCompanyName);
+          const extractedCompanyId = url.searchParams.get("companyId");
+          if (extractedCompanyId) {
+            const companyDoc = await getDoc(doc(db, "companies", extractedCompanyId));
+            if (companyDoc.exists()) {
+              finalCompanyName = companyDoc.data().companyName;
+              console.log(`[ClientChat] Extracted company name "${finalCompanyName}" from URL`);
+              
+              // Update the client document with the correct company name
+              await updateDoc(clientDocRef, {
+                companyName: finalCompanyName,
+                companyId: extractedCompanyId
+              });
+              console.log(`[ClientChat] Updated client document with correct company name`);
+            }
+          }
+        } catch (urlError) {
+          console.error("Error parsing URL:", urlError);
+        }
+      } else if (companyId && (!finalCompanyName || finalCompanyName === "")) {
+        // If we have companyId but no companyName, fetch it
+        try {
+          const companyDoc = await getDoc(doc(db, "companies", companyId));
+          if (companyDoc.exists()) {
+            finalCompanyName = companyDoc.data().companyName;
+            console.log(`[ClientChat] Fetched company name "${finalCompanyName}" using companyId`);
+            
+            // Update the client document with the correct company name
+            await updateDoc(clientDocRef, {
+              companyName: finalCompanyName
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching company name:", error);
+        }
+      }
+      
+      setCompanyName(finalCompanyName);
     } catch (error) {
       console.error("Error fetching data:", error);
       // Don't throw error, just log it

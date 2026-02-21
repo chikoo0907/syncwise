@@ -10,6 +10,8 @@ import {
   getDocs,
   addDoc,
   onSnapshot,
+  doc,
+  getDoc,
 } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,31 +60,77 @@ export default function Chat() {
       if (!user) return;
 
       // Get company name from companies collection
-      const companyDoc = await getDocs(collection(db, "companies"));
-      const companyData = companyDoc.docs
-        .find((doc) => doc.id === user.uid)
-        ?.data();
+      const companyDoc = await getDoc(doc(db, "companies", user.uid));
+      const companyData = companyDoc.exists() ? companyDoc.data() : null;
 
       if (companyData) {
         setCompanyName(companyData.companyName);
+        const companyUid = user.uid;
+        const companyDisplayName = companyData.companyName;
 
-        // Fetch all clients for this company (removed orderBy to avoid index issues)
-        const clientsQuery = query(
-          collection(db, "clients"),
-          where("companyName", "==", companyData.companyName)
-        );
-
-        const clientsSnapshot = await getDocs(clientsQuery);
-        const clientsList = clientsSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          name: doc.data().clientName,
-          email: doc.data().email,
-          avatar: doc.data().clientName?.charAt(0)?.toUpperCase() || "C",
-          status: "active", // Default status
-          lastMessage: "No messages yet",
-          lastMessageTime: "Never",
-          unread: 0,
-        }));
+        // Fetch ALL clients and filter client-side (to support both companyName and companyId matching)
+        const allClientsSnapshot = await getDocs(collection(db, "clients"));
+        console.log(`[Chat] Total clients in database: ${allClientsSnapshot.docs.length}`);
+        console.log(`[Chat] Looking for clients with companyId: ${companyUid} or companyName: ${companyDisplayName}`);
+        
+        const clientsList = [];
+        allClientsSnapshot.docs.forEach((clientDoc) => {
+          const data = clientDoc.data();
+          const clientId = clientDoc.id;
+          
+          // Match by companyName OR by companyId (for invite-link signups)
+          // Also handle case where companyName might be a URL (legacy data)
+          const matchesByName = data.companyName === companyDisplayName;
+          let matchesById = data.companyId === companyUid;
+          const companyNameIsUrl = data.companyName && (
+            data.companyName.startsWith("http://") || 
+            data.companyName.startsWith("https://")
+          );
+          
+          // If companyName is a URL, try to extract companyId from it
+          let extractedCompanyId = null;
+          if (companyNameIsUrl) {
+            try {
+              const url = new URL(data.companyName);
+              extractedCompanyId = url.searchParams.get("companyId");
+              if (extractedCompanyId === companyUid) {
+                matchesById = true;
+                console.log(`[Chat] Extracted companyId "${extractedCompanyId}" from URL in companyName`);
+              }
+            } catch (urlError) {
+              // Not a valid URL, ignore
+            }
+          }
+          
+          // Also check if companyName URL contains the companyId as substring (fallback)
+          let matchesByUrl = false;
+          if (companyNameIsUrl && data.companyName.includes(companyUid)) {
+            matchesByUrl = true;
+          }
+          
+          if (matchesByName || matchesById || matchesByUrl) {
+            clientsList.push({
+              id: clientId,
+              name: data.clientName,
+              email: data.email,
+              avatar: data.clientName?.charAt(0)?.toUpperCase() || "C",
+              status: "active", // Default status
+              lastMessage: "No messages yet",
+              lastMessageTime: "Never",
+              unread: 0,
+            });
+            console.log(`[Chat] ✓ Matched client: ${data.clientName} (companyName: ${data.companyName}, companyId: ${data.companyId || extractedCompanyId || 'none'})`);
+          } else {
+            // Debug why it didn't match
+            if (data.companyId) {
+              console.log(`[Chat] ✗ Client ${data.clientName || clientId}: companyId "${data.companyId}" !== "${companyUid}"`);
+            } else {
+              console.log(`[Chat] ✗ Client ${data.clientName || clientId}: no companyId field, companyName: "${data.companyName}"`);
+            }
+          }
+        });
+        
+        console.log(`[Chat] Found ${clientsList.length} clients for company ${companyDisplayName} (UID: ${companyUid})`);
 
         // Sort locally instead of in query
         clientsList.sort((a, b) => {

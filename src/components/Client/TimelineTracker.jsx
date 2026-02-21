@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { auth, db } from "@/firebase";
-import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { collection, query, where, getDocs, orderBy, doc, getDoc } from "firebase/firestore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -124,14 +124,44 @@ export default function TimelineTracker() {
       if (!user) return;
 
       // Get client data from clients collection
-      const clientDoc = await getDocs(collection(db, "clients"));
-      const clientData = clientDoc.docs
-        .find((doc) => doc.id === user.uid)
-        ?.data();
+      const clientDocRef = doc(db, "clients", user.uid);
+      const clientDoc = await getDoc(clientDocRef);
+      
+      if (!clientDoc.exists()) {
+        return;
+      }
 
-      if (clientData) {
-        setClientName(clientData.clientName);
-        setCompanyName(clientData.companyName);
+      const clientData = clientDoc.data();
+      setClientName(clientData.clientName);
+      
+      // Get the actual company name - if it's a URL, fetch the real name
+      let finalCompanyName = clientData.companyName;
+      if (finalCompanyName && (finalCompanyName.startsWith("http://") || finalCompanyName.startsWith("https://"))) {
+        try {
+          const url = new URL(finalCompanyName);
+          const extractedCompanyId = url.searchParams.get("companyId");
+          if (extractedCompanyId) {
+            const companyDoc = await getDoc(doc(db, "companies", extractedCompanyId));
+            if (companyDoc.exists()) {
+              finalCompanyName = companyDoc.data().companyName;
+            }
+          }
+        } catch (urlError) {
+          // Not a valid URL or error parsing
+        }
+      } else if (clientData.companyId && (!finalCompanyName || finalCompanyName === "")) {
+        // If we have companyId but no companyName, fetch it
+        try {
+          const companyDoc = await getDoc(doc(db, "companies", clientData.companyId));
+          if (companyDoc.exists()) {
+            finalCompanyName = companyDoc.data().companyName;
+          }
+        } catch (error) {
+          // Error fetching company
+        }
+      }
+      
+      setCompanyName(finalCompanyName);
 
         // Fetch all projects for this client (removed orderBy to avoid index issues)
         const projectsQuery = query(
@@ -178,7 +208,6 @@ export default function TimelineTracker() {
         });
 
         setTimelines(timelinesList);
-      }
     } catch (error) {
       console.error("Error fetching data:", error);
       // Don't throw error, just log it

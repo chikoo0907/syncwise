@@ -1,11 +1,14 @@
 "use client";
-import React from "react";
+import React, { Suspense } from "react";
 import SignUpPage from "@/components/SignUpPage";
+
 
 const SignUp = () => {
   return (
     <div>
-      <SignUpPage />
+      <Suspense fallback={<div>Loading signup...</div>}>
+        <SignUpPage />
+      </Suspense>
     </div>
   );
 };

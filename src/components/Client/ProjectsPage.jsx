@@ -180,6 +180,25 @@ const ProjectsPage = () => {
         ),
       },
       {
+        id: "livePreview",
+        header: "Live Preview",
+        cell: ({ row }) =>
+          row.original.liveLink ? (
+            <div className="w-full flex justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full border-blue-400 text-blue-600 hover:bg-blue-50"
+                onClick={() => window.open(row.original.liveLink, "_blank")}
+              >
+                Visit Site
+              </Button>
+            </div>
+          ) : (
+            <div className="text-xs text-gray-400 italic">No link provided</div>
+          ),
+      },
+      {
         id: "download",
         header: "Download PDF",
         cell: ({ row }) =>

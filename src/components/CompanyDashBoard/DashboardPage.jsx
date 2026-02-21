@@ -13,13 +13,15 @@ import {
 import { auth, db } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
+import { HiOutlineLink, HiOutlineCheck } from "react-icons/hi";
 import ClientManagement from "./ClientManagement";
 import ManageProjects from "./ManageProjects";
 import Timeline from "./Timeline";
 import TicketRaising from "./TicketRaising";
 import Chat from "./Chat";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc as firestoreDoc, updateDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
+import { Button } from "@/components/ui/button";
 
 const sections = [
   {
@@ -44,6 +46,7 @@ const sections = [
 export default function Dashboard() {
   const [activeSection, setActiveSection] = useState("Client Management");
   const [companyName, setCompanyName] = useState("");
+  const [inviteLink, setInviteLink] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -56,6 +59,15 @@ export default function Dashboard() {
             ?.data();
           if (companyData) {
             setCompanyName(companyData.companyName);
+            const generatedLink = `${window.location.origin}/signup?companyId=${user.uid}`;
+            const storedLink = companyData.inviteLink || generatedLink;
+            setInviteLink(storedLink);
+            // Backfill inviteLink for existing companies
+            if (!companyData.inviteLink) {
+              await updateDoc(firestoreDoc(db, "companies", user.uid), {
+                inviteLink: generatedLink,
+              });
+            }
           }
         } catch (error) {
           setCompanyName("");
@@ -102,11 +114,25 @@ export default function Dashboard() {
             </span>
             <div className="flex flex-col items-center mt-2 ">
               <p className="text-sm text-gray-500 text-center">Company Panel</p>
-              <p className="text-md text-gray-700 font-semibold text-center">
+              <p className="text-md text-gray-700 font-semibold text-center mb-2">
                 <span className="text-lg md:text-xl lg:text-2xl">
                   {companyName || "Company Name"}
                 </span>
               </p>
+              {inviteLink && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full text-xs py-1 h-7 bg-[#e6f4fa] border-none text-[#00B2E2] hover:bg-[#d0eaf5] flex items-center gap-1"
+                  onClick={() => {
+                    navigator.clipboard.writeText(inviteLink);
+                    alert("Invite link copied to clipboard!");
+                  }}
+                >
+                  <HiOutlineLink size={14} />
+                  Copy Invite Link
+                </Button>
+              )}
             </div>
           </div>
           <nav className="flex flex-col gap-6">
@@ -114,10 +140,9 @@ export default function Dashboard() {
               <button
                 key={section.key}
                 className={`flex items-center gap-3 px-6 py-2 rounded-2xl transition-all duration-200 font-medium text-lg focus:outline-none focus:ring-2 focus:ring-[#00B2E2] focus:ring-opacity-50
-                  ${
-                    activeSection === section.key
-                      ? "bg-[#00B2E2] text-white shadow-lg transform scale-105"
-                      : "hover:bg-[#e6f4fa] hover:text-[#00B2E2] text-gray-600"
+                  ${activeSection === section.key
+                    ? "bg-[#00B2E2] text-white shadow-lg transform scale-105"
+                    : "hover:bg-[#e6f4fa] hover:text-[#00B2E2] text-gray-600"
                   }`}
                 onClick={() => setActiveSection(section.key)}
               >
