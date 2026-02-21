@@ -16,15 +16,22 @@ import { Textarea } from "@/components/ui/textarea";
 import { Upload } from "lucide-react";
 import PropTypes from "prop-types";
 
-export default function TimelineActionDialog({ timeline, onUpdate, readOnly = false }) {
+export default function TimelineActionDialog({
+  timeline,
+  onUpdate,
+  readOnly = false,
+  collectionName = "timelines",
+  fieldName = "timelineSummary",
+  title = "Timeline Summary"
+}) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [timelineSummary, setTimelineSummary] = useState(
-    timeline?.timelineSummary || ""
+    timeline?.[fieldName] || ""
   );
   const [savingSummary, setSavingSummary] = useState(false);
 
   const handleUploadClick = () => {
-    setTimelineSummary(timeline?.timelineSummary || "");
+    setTimelineSummary(timeline?.[fieldName] || "");
     setDialogOpen(true);
   };
 
@@ -33,14 +40,14 @@ export default function TimelineActionDialog({ timeline, onUpdate, readOnly = fa
 
     setSavingSummary(true);
     try {
-      await updateDoc(doc(db, "timelines", timeline.id), {
-        timelineSummary: timelineSummary,
+      await updateDoc(doc(db, collectionName, timeline.id), {
+        [fieldName]: timelineSummary,
         updatedAt: new Date(),
       });
 
       onUpdate(timeline.id, timelineSummary);
       setDialogOpen(false);
-      alert("Timeline summary saved successfully!");
+      alert(title + " saved successfully!");
     } catch (error) {
       console.error("Error saving timeline summary:", error);
       alert("Failed to save timeline summary");
@@ -64,10 +71,10 @@ export default function TimelineActionDialog({ timeline, onUpdate, readOnly = fa
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Timeline Summary</DialogTitle>
+            <DialogTitle>{title}</DialogTitle>
             <DialogDescription>
-              Add a summary or link for the completed timeline item "
-              {timeline?.title}". This is optional and can be left empty.
+              Add a summary or link for "{timeline?.title || timeline?.name}".
+              This is optional and can be left empty.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -107,4 +114,7 @@ TimelineActionDialog.propTypes = {
   timeline: PropTypes.any,
   onUpdate: PropTypes.func.isRequired,
   readOnly: PropTypes.bool,
+  collectionName: PropTypes.string,
+  fieldName: PropTypes.string,
+  title: PropTypes.string
 };

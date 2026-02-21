@@ -9,6 +9,8 @@ import {
   getDocs,
   addDoc,
   orderBy,
+  doc,
+  getDoc,
 } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,14 +69,44 @@ export default function TicketRaise() {
       if (!user) return;
 
       // Get client data from clients collection
-      const clientDoc = await getDocs(collection(db, "clients"));
-      const clientData = clientDoc.docs
-        .find((doc) => doc.id === user.uid)
-        ?.data();
+      const clientDocRef = doc(db, "clients", user.uid);
+      const clientDoc = await getDoc(clientDocRef);
+      
+      if (!clientDoc.exists()) {
+        return;
+      }
 
-      if (clientData) {
-        setClientName(clientData.clientName);
-        setCompanyName(clientData.companyName);
+      const clientData = clientDoc.data();
+      setClientName(clientData.clientName);
+      
+      // Get the actual company name - if it's a URL, fetch the real name
+      let finalCompanyName = clientData.companyName;
+      if (finalCompanyName && (finalCompanyName.startsWith("http://") || finalCompanyName.startsWith("https://"))) {
+        try {
+          const url = new URL(finalCompanyName);
+          const extractedCompanyId = url.searchParams.get("companyId");
+          if (extractedCompanyId) {
+            const companyDoc = await getDoc(doc(db, "companies", extractedCompanyId));
+            if (companyDoc.exists()) {
+              finalCompanyName = companyDoc.data().companyName;
+            }
+          }
+        } catch (urlError) {
+          // Not a valid URL or error parsing
+        }
+      } else if (clientData.companyId && (!finalCompanyName || finalCompanyName === "")) {
+        // If we have companyId but no companyName, fetch it
+        try {
+          const companyDoc = await getDoc(doc(db, "companies", clientData.companyId));
+          if (companyDoc.exists()) {
+            finalCompanyName = companyDoc.data().companyName;
+          }
+        } catch (error) {
+          // Error fetching company
+        }
+      }
+      
+      setCompanyName(finalCompanyName);
 
         // Fetch all tickets for this client (removed orderBy to avoid index issues)
         const ticketsQuery = query(
@@ -91,7 +123,6 @@ export default function TicketRaise() {
         // Use utility function for safe sorting
         const sortedTickets = safeSortByDate(ticketsList, "createdAt", false);
         setTickets(sortedTickets);
-      }
     } catch (error) {
       handleFirebaseError(error, "fetchClientAndTickets");
     } finally {

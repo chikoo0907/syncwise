@@ -1,3 +1,4 @@
+"use client";
 import React, { useState } from "react";
 import {
   Card,
@@ -13,8 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { auth, db } from "@/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
-import { useRouter } from "next/navigation";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
 
 export default function SignupPage() {
   // --- Backend logic from user code ---
@@ -25,6 +27,8 @@ export default function SignupPage() {
     password: "",
     clientName: "",
     clientCompanyName: "",
+    clientCompanyLink: "",
+    companyId: "", // stored when joining via invite link
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -41,6 +45,8 @@ export default function SignupPage() {
       password: "",
       clientName: "",
       clientCompanyName: "",
+      clientCompanyLink: "",
+      companyId: "",
     });
     setError("");
   };
@@ -67,22 +73,69 @@ export default function SignupPage() {
       const user = userCredential.user;
       // Store user info in Firestore
       if (userType === "company") {
+        const inviteLink = `${window.location.origin}/signup?companyId=${user.uid}`;
         await setDoc(doc(db, "companies", user.uid), {
           userType,
           email,
           displayName,
           companyName: form.companyName,
+          inviteLink,
           createdAt: new Date(),
         });
       } else {
-        await setDoc(doc(db, "clients", user.uid), {
+        // Get companyId from URL params if not in form (for invite link signups)
+        const companyIdFromUrl = searchParams.get("companyId");
+        let finalCompanyId = form.companyId || companyIdFromUrl;
+        
+        // Check if companyName field contains a URL (invite link) and extract companyId
+        let companyNameFromForm = form.clientCompanyName;
+        if (companyNameFromForm && (companyNameFromForm.startsWith("http://") || companyNameFromForm.startsWith("https://"))) {
+          try {
+            const url = new URL(companyNameFromForm);
+            const extractedCompanyId = url.searchParams.get("companyId");
+            if (extractedCompanyId) {
+              finalCompanyId = finalCompanyId || extractedCompanyId;
+              companyNameFromForm = ""; // Clear the URL, we'll fetch the real name
+              console.log(`Extracted companyId "${extractedCompanyId}" from URL in companyName field`);
+            }
+          } catch (urlErr) {
+            // Not a valid URL, treat as company name
+          }
+        }
+        
+        // If we have a companyId, ALWAYS fetch the actual company name from Firestore
+        // This ensures we never save a URL or incorrect value as companyName
+        let finalCompanyName = companyNameFromForm;
+        if (finalCompanyId) {
+          try {
+            const companyDoc = await getDoc(doc(db, "companies", finalCompanyId));
+            if (companyDoc.exists()) {
+              finalCompanyName = companyDoc.data().companyName;
+              console.log(`Fetched company name "${finalCompanyName}" for companyId: ${finalCompanyId}`);
+            } else {
+              console.error(`Company not found for companyId: ${finalCompanyId}`);
+            }
+          } catch (err) {
+            console.error("Error fetching company name:", err);
+          }
+        }
+        
+        const clientData = {
           userType,
           email,
           displayName,
           clientName: form.clientName,
-          companyName: form.clientCompanyName,
+          companyName: finalCompanyName,
           createdAt: new Date(),
-        });
+        };
+        
+        // Always include companyId if we have it (from invite link)
+        if (finalCompanyId) {
+          clientData.companyId = finalCompanyId;
+        }
+        
+        await setDoc(doc(db, "clients", user.uid), clientData);
+        console.log("Client signed up with data:", { ...clientData, password: "[hidden]" });
       }
       // Redirect based on user type
       if (userType === "company") {
@@ -98,6 +151,8 @@ export default function SignupPage() {
         password: "",
         clientName: "",
         clientCompanyName: "",
+        clientCompanyLink: "",
+        companyId: "",
       });
     } catch (err) {
       setError(err.message || "Signup failed");
@@ -108,6 +163,30 @@ export default function SignupPage() {
   // --- End backend logic ---
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const companyId = searchParams.get("companyId");
+    if (companyId) {
+      setUserType("client");
+      const fetchCompany = async () => {
+        try {
+          const companyDoc = await getDoc(doc(db, "companies", companyId));
+          if (companyDoc.exists()) {
+            const fetchedName = companyDoc.data().companyName;
+            setForm((prev) => ({
+              ...prev,
+              clientCompanyName: fetchedName,
+              companyId: companyId, // store companyId for Firestore
+            }));
+          }
+        } catch (error) {
+          console.error("Error fetching company for invite:", error);
+        }
+      };
+      fetchCompany();
+    }
+  }, [searchParams]);
 
   return (
     <div className="h-screen w-full flex items-stretch bg-gray-50 p-10 gap-8">
@@ -211,12 +290,46 @@ export default function SignupPage() {
                   </div>
                   <div className="space-y-2 w-[400px]">
                     <Input
-                      placeholder="Company Name"
+                      placeholder="Company Name or paste Invite Link"
                       name="clientCompanyName"
                       value={form.clientCompanyName}
-                      onChange={handleChange}
+                      readOnly={!!searchParams.get("companyId")}
+                      onChange={async (e) => {
+                        const val = e.target.value;
+                        // Always update the visible field
+                        setForm((prev) => ({
+                          ...prev,
+                          clientCompanyName: val,
+                          companyId: "",
+                        }));
+                        // If it looks like a URL, try to resolve company from link
+                        try {
+                          const url = new URL(val);
+                          const cid = url.searchParams.get("companyId");
+                          if (cid) {
+                            const companyDoc = await getDoc(doc(db, "companies", cid));
+                            if (companyDoc.exists()) {
+                              setForm((prev) => ({
+                                ...prev,
+                                clientCompanyName: companyDoc.data().companyName,
+                                companyId: cid,
+                              }));
+                            }
+                          }
+                        } catch { }
+                      }}
                       className="h-12 rounded-3xl focus:border-[#00B2E2] focus:ring-2 focus:ring-[#00B2E2] border border-gray-300"
                     />
+                    {form.companyId && (
+                      <p className="text-xs text-[#00B2E2] px-3">
+                        ✓ Company found: {form.clientCompanyName}
+                      </p>
+                    )}
+                    {searchParams.get("companyId") && (
+                      <p className="text-xs text-[#00B2E2] px-3">
+                        ✓ Joining via invite link
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2 w-[400px]">
                     <Input

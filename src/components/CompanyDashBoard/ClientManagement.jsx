@@ -4,12 +4,11 @@ import React, { useState, useEffect } from "react";
 import { auth, db } from "@/firebase";
 import {
   collection,
-  query,
-  where,
   getDocs,
   addDoc,
   doc,
   getDoc,
+  updateDoc,
 } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +42,7 @@ export default function ClientManagement() {
     startDate: "",
     endDate: "",
     status: "pending",
+    liveLink: "",
   });
   const [globalFilter, setGlobalFilter] = useState("");
 
@@ -60,18 +60,73 @@ export default function ClientManagement() {
       if (companyDoc.exists()) {
         const companyData = companyDoc.data();
         setCompanyName(companyData.companyName);
+        const companyUid = user.uid;
+        const companyDisplayName = companyData.companyName;
 
-        // Fetch clients that belong to this company (removed orderBy to avoid index issues)
-        const clientsQuery = query(
-          collection(db, "clients"),
-          where("companyName", "==", companyData.companyName)
-        );
-
-        const clientsSnapshot = await getDocs(clientsQuery);
-        const clientsList = clientsSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        // Fetch ALL clients and filter client-side (avoids Firestore index issues)
+        const allClientsSnapshot = await getDocs(collection(db, "clients"));
+        console.log(`Total clients in database: ${allClientsSnapshot.docs.length}`);
+        console.log(`Looking for clients with companyId: ${companyUid} or companyName: ${companyDisplayName}`);
+        
+        const clientsList = [];
+        allClientsSnapshot.docs.forEach((clientDoc) => {
+          const data = clientDoc.data();
+          const clientId = clientDoc.id;
+          
+          // Debug: Log each client's data
+          console.log(`Client ${data.clientName || 'unnamed'}:`, {
+            id: clientId,
+            companyName: data.companyName,
+            companyId: data.companyId,
+            hasCompanyId: !!data.companyId,
+            companyIdType: typeof data.companyId,
+            companyUidType: typeof companyUid,
+            companyIdMatches: data.companyId === companyUid,
+            companyNameMatches: data.companyName === companyDisplayName
+          });
+          
+          // Match by companyName OR by companyId (for invite-link signups)
+          // Also handle case where companyName might be a URL (legacy data)
+          const matchesByName = data.companyName === companyDisplayName;
+          let matchesById = data.companyId === companyUid;
+          const companyNameIsUrl = data.companyName && (
+            data.companyName.startsWith("http://") || 
+            data.companyName.startsWith("https://")
+          );
+          
+          // If companyName is a URL, try to extract companyId from it
+          let extractedCompanyId = null;
+          if (companyNameIsUrl) {
+            try {
+              const url = new URL(data.companyName);
+              extractedCompanyId = url.searchParams.get("companyId");
+              if (extractedCompanyId === companyUid) {
+                matchesById = true;
+                console.log(`Extracted companyId "${extractedCompanyId}" from URL in companyName`);
+              }
+            } catch (urlError) {
+              // Not a valid URL, ignore
+            }
+          }
+          
+          // Also check if companyName URL contains the companyId as substring (fallback)
+          let matchesByUrl = false;
+          if (companyNameIsUrl && data.companyName.includes(companyUid)) {
+            matchesByUrl = true;
+          }
+          
+          if (matchesByName || matchesById || matchesByUrl) {
+            clientsList.push({ id: clientId, ...data });
+            console.log(`✓ Matched client: ${data.clientName} (companyName: ${data.companyName}, companyId: ${data.companyId || extractedCompanyId || 'none'})`);
+          } else {
+            // Debug why it didn't match
+            if (data.companyId) {
+              console.log(`✗ Client ${data.clientName || clientId}: companyId "${data.companyId}" !== "${companyUid}" (match: ${data.companyId === companyUid})`);
+            } else {
+              console.log(`✗ Client ${data.clientName || clientId}: no companyId field, companyName: "${data.companyName}"`);
+            }
+          }
+        });
 
         // Sort locally instead of in query
         clientsList.sort((a, b) => {
@@ -83,6 +138,33 @@ export default function ClientManagement() {
         });
 
         setClients(clientsList);
+        console.log(`Found ${clientsList.length} clients for company ${companyDisplayName} (UID: ${companyUid})`);
+        
+        // Fix any clients that have URLs in their companyName field
+        const clientsToFix = clientsList.filter(client => 
+          client.companyName && (
+            client.companyName.startsWith("http://") || 
+            client.companyName.startsWith("https://")
+          ) && client.companyId
+        );
+        
+        if (clientsToFix.length > 0) {
+          console.log(`Found ${clientsToFix.length} clients with URLs in companyName, fixing...`);
+          for (const client of clientsToFix) {
+            try {
+              await updateDoc(doc(db, "clients", client.id), {
+                companyName: companyDisplayName
+              });
+              console.log(`Fixed companyName for client: ${client.clientName}`);
+            } catch (fixError) {
+              console.error(`Error fixing client ${client.id}:`, fixError);
+            }
+          }
+          // Refresh the list after fixing
+          if (clientsToFix.length > 0) {
+            setTimeout(() => fetchCompanyAndClients(), 1000);
+          }
+        }
       }
     } catch (error) {
       console.error("Error fetching clients:", error);
@@ -113,6 +195,7 @@ export default function ClientManagement() {
         startDate: "",
         endDate: "",
         status: "pending",
+        liveLink: "",
       });
       setShowAddProject(false);
 
@@ -376,6 +459,22 @@ export default function ClientManagement() {
                       placeholder="Enter project name"
                       className="rounded-2xl border-gray-200 focus:border-[#00B2E2] focus:ring-[#00B2E2]"
                       required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-700">
+                      Live Preview Link (Optional)
+                    </label>
+                    <Input
+                      value={newProject.liveLink}
+                      onChange={(e) =>
+                        setNewProject({
+                          ...newProject,
+                          liveLink: e.target.value,
+                        })
+                      }
+                      placeholder="https://your-preview-link.com"
+                      className="rounded-2xl border-gray-200 focus:border-[#00B2E2] focus:ring-[#00B2E2]"
                     />
                   </div>
                   <div>

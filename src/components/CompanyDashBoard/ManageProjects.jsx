@@ -142,16 +142,19 @@ export default function ManageProjects() {
     }
   };
 
-  const saveFinalLink = async (projectId, link) => {
+  const saveLiveLink = async (projectId, link) => {
+    const finalLink = link || "";
+    console.log(`Saving liveLink for ${projectId}:`, finalLink);
     setSavingLink((prev) => ({ ...prev, [projectId]: true }));
     try {
-      await updateDoc(doc(db, "projects", projectId), { finalLink: link });
+      await updateDoc(doc(db, "projects", projectId), { liveLink: finalLink });
       setProjects((prev) =>
-        prev.map((p) => (p.id === projectId ? { ...p, finalLink: link } : p))
+        prev.map((p) => (p.id === projectId ? { ...p, liveLink: finalLink } : p))
       );
-      alert("Link saved!");
+      alert("Live Link saved successfully!");
     } catch (e) {
-      alert("Failed to save link");
+      console.error("Error saving live link details:", e);
+      alert("Failed to save link: " + (e.message || "Unknown error"));
     } finally {
       setSavingLink((prev) => ({ ...prev, [projectId]: false }));
     }
@@ -255,6 +258,9 @@ export default function ManageProjects() {
         cell: ({ row }) => (
           <DeliverableDialog
             timeline={row.original}
+            collectionName="projects"
+            fieldName="projectSummary"
+            title="Project Deliverables"
             onUpdate={(projectId, summary) => {
               setProjects((prev) =>
                 prev.map((p) =>
@@ -284,6 +290,39 @@ export default function ManageProjects() {
         ),
       },
       {
+        id: "liveLink",
+        header: "Live Preview Link",
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <Input
+              defaultValue={row.original.liveLink || ""}
+              onChange={(e) => {
+                setLinkInputs((prev) => ({
+                  ...prev,
+                  [row.original.id]: e.target.value,
+                }));
+              }}
+              placeholder="https://..."
+              className="text-xs h-8 w-40"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                saveLiveLink(
+                  row.original.id,
+                  linkInputs[row.original.id] || row.original.liveLink
+                )
+              }
+              disabled={savingLink[row.original.id]}
+              className="h-8 px-2"
+            >
+              Save
+            </Button>
+          </div>
+        ),
+      },
+      {
         id: "delete",
         header: "Delete",
         cell: ({ row }) => (
@@ -298,7 +337,7 @@ export default function ManageProjects() {
         ),
       },
     ],
-    []
+    [linkInputs, savingLink]
   );
 
   // Table instance
