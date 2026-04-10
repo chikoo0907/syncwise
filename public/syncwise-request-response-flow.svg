@@ -1,0 +1,223 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1600" y2="900" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07111F"/>
+      <stop offset="0.5" stop-color="#0B1730"/>
+      <stop offset="1" stop-color="#120A24"/>
+    </linearGradient>
+    <linearGradient id="panelBlue" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#0D3154"/>
+      <stop offset="1" stop-color="#0A1E35"/>
+    </linearGradient>
+    <linearGradient id="panelPurple" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#4A2676"/>
+      <stop offset="1" stop-color="#23113C"/>
+    </linearGradient>
+    <linearGradient id="panelGreen" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#1D5C4C"/>
+      <stop offset="1" stop-color="#10322D"/>
+    </linearGradient>
+    <linearGradient id="panelGold" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#7B5320"/>
+      <stop offset="1" stop-color="#2D2010"/>
+    </linearGradient>
+    <linearGradient id="panelCyan" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#14586B"/>
+      <stop offset="1" stop-color="#0B2630"/>
+    </linearGradient>
+    <linearGradient id="panelDatabase" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#123C69"/>
+      <stop offset="1" stop-color="#1A103D"/>
+    </linearGradient>
+    <linearGradient id="panelOutput" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#5E1F7A"/>
+      <stop offset="1" stop-color="#2B1038"/>
+    </linearGradient>
+    <filter id="glowBlue" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+    <style>
+      .title { font: 700 44px 'Segoe UI', Arial, sans-serif; fill: #72d4ff; }
+      .subtitle { font: 600 22px 'Segoe UI', Arial, sans-serif; fill: #d6e9ff; }
+      .cap { font: 700 24px 'Segoe UI', Arial, sans-serif; fill: #ffffff; }
+      .smallcap { font: 600 16px 'Segoe UI', Arial, sans-serif; fill: #d7dff1; letter-spacing: 1px; }
+      .body { font: 400 17px 'Segoe UI', Arial, sans-serif; fill: #ecf4ff; }
+      .tiny { font: 400 14px 'Segoe UI', Arial, sans-serif; fill: #bfd2eb; }
+      .step { font: 700 14px 'Segoe UI', Arial, sans-serif; fill: #fff; }
+    </style>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#56c7ff"/>
+    </marker>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#73ff9c"/>
+    </marker>
+    <marker id="arrowGold" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#ffc44d"/>
+    </marker>
+    <marker id="arrowPurple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#d97dff"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <circle cx="180" cy="120" r="120" fill="#0E2B4A" opacity="0.35"/>
+  <circle cx="1430" cy="110" r="140" fill="#2A1040" opacity="0.28"/>
+  <circle cx="1490" cy="790" r="160" fill="#093145" opacity="0.22"/>
+  <circle cx="120" cy="760" r="140" fill="#1E103B" opacity="0.18"/>
+
+  <text x="800" y="58" text-anchor="middle" class="title">REQUEST-RESPONSE FLOW</text>
+  <text x="800" y="100" text-anchor="middle" class="title" fill="#ffffff">SYNCWISE</text>
+  <rect x="485" y="118" width="630" height="34" rx="17" fill="#1A2745" stroke="#5EC8FF" stroke-opacity="0.35"/>
+  <text x="800" y="141" text-anchor="middle" class="subtitle">From Company-Client Interaction to Collaborative Project Output</text>
+
+  <g filter="url(#softShadow)">
+    <rect x="70" y="200" width="210" height="420" rx="24" fill="url(#panelBlue)" stroke="#5bcaff" stroke-width="2"/>
+    <rect x="335" y="200" width="210" height="420" rx="24" fill="url(#panelPurple)" stroke="#cc7cff" stroke-width="2"/>
+    <rect x="600" y="200" width="230" height="420" rx="24" fill="url(#panelGreen)" stroke="#79ffaf" stroke-width="2"/>
+    <rect x="890" y="200" width="220" height="420" rx="24" fill="url(#panelGold)" stroke="#ffc85e" stroke-width="2"/>
+    <rect x="1170" y="200" width="220" height="420" rx="24" fill="url(#panelCyan)" stroke="#68f2ff" stroke-width="2"/>
+  </g>
+
+  <g filter="url(#glowBlue)">
+    <circle cx="175" cy="255" r="36" fill="#0F2642" stroke="#64ccff" stroke-width="3"/>
+    <rect x="156" y="239" width="38" height="24" rx="3" stroke="#7ad5ff" stroke-width="3"/>
+    <path d="M168 270H182M175 263V278" stroke="#7ad5ff" stroke-width="3" stroke-linecap="round"/>
+
+    <circle cx="440" cy="255" r="36" fill="#24113D" stroke="#d48dff" stroke-width="3"/>
+    <path d="M428 255L440 243L452 255L447 269H433L428 255Z" stroke="#e1b3ff" stroke-width="3" fill="none"/>
+    <circle cx="440" cy="257" r="6" stroke="#e1b3ff" stroke-width="3"/>
+
+    <circle cx="715" cy="255" r="36" fill="#12362D" stroke="#86ffb5" stroke-width="3"/>
+    <text x="715" y="264" text-anchor="middle" style="font:700 26px 'Segoe UI', Arial, sans-serif; fill:#a4ffc6;">JS</text>
+
+    <circle cx="1000" cy="255" r="36" fill="#37260E" stroke="#ffd071" stroke-width="3"/>
+    <path d="M987 244H1013V251H987V244ZM987 257H1013V264H987V257ZM993 270H1007" stroke="#ffd88b" stroke-width="3" stroke-linecap="round"/>
+
+    <circle cx="1280" cy="255" r="36" fill="#0B2E39" stroke="#77f0ff" stroke-width="3"/>
+    <circle cx="1268" cy="255" r="8" stroke="#93f5ff" stroke-width="3"/>
+    <circle cx="1292" cy="247" r="8" stroke="#93f5ff" stroke-width="3"/>
+    <circle cx="1292" cy="263" r="8" stroke="#93f5ff" stroke-width="3"/>
+    <path d="M1276 252L1284 249M1276 258L1284 261" stroke="#93f5ff" stroke-width="3"/>
+  </g>
+
+  <text x="175" y="320" text-anchor="middle" class="cap">USER</text>
+  <text x="175" y="345" text-anchor="middle" class="smallcap">(Client / Company)</text>
+  <text x="105" y="390" class="body">• Sign up / log in</text>
+  <text x="105" y="420" class="body">• Join by invite link</text>
+  <text x="105" y="450" class="body">• Manage projects</text>
+  <text x="105" y="480" class="body">• Track timelines</text>
+  <text x="105" y="510" class="body">• Raise tickets</text>
+  <text x="105" y="540" class="body">• Chat in real time</text>
+  <text x="105" y="570" class="body">• View dashboards / PDFs</text>
+
+  <text x="440" y="320" text-anchor="middle" class="cap">AUTH &amp; ACCESS</text>
+  <text x="440" y="345" text-anchor="middle" class="smallcap">Firebase Auth</text>
+  <text x="370" y="390" class="body">• Company / client signup</text>
+  <text x="370" y="420" class="body">• Login validation</text>
+  <text x="370" y="450" class="body">• Role identification</text>
+  <text x="370" y="480" class="body">• Session persistence</text>
+  <text x="370" y="510" class="body">• Access control</text>
+  <rect x="385" y="548" width="110" height="40" rx="20" fill="#1C1532" stroke="#d38cff"/>
+  <text x="440" y="573" text-anchor="middle" class="tiny">JWT-like session flow</text>
+
+  <text x="715" y="320" text-anchor="middle" class="cap">APPLICATION LAYER</text>
+  <text x="715" y="345" text-anchor="middle" class="smallcap">Next.js + React + Firebase SDK</text>
+  <text x="630" y="390" class="body">• Role-based routing</text>
+  <text x="630" y="420" class="body">• Invite-link onboarding</text>
+  <text x="630" y="450" class="body">• Project / deliverable handling</text>
+  <text x="630" y="480" class="body">• Timeline assignment</text>
+  <text x="630" y="510" class="body">• Ticket workflow updates</text>
+  <text x="630" y="540" class="body">• Chat coordination logic</text>
+  <text x="630" y="570" class="body">• PDF and dashboard rendering</text>
+
+  <text x="1000" y="320" text-anchor="middle" class="cap">DATA SERVICES</text>
+  <text x="1000" y="345" text-anchor="middle" class="smallcap">Firestore + Realtime DB</text>
+  <text x="920" y="390" class="body">• Store companies</text>
+  <text x="920" y="420" class="body">• Store clients</text>
+  <text x="920" y="450" class="body">• Store projects</text>
+  <text x="920" y="480" class="body">• Store timelines</text>
+  <text x="920" y="510" class="body">• Store tickets</text>
+  <text x="920" y="540" class="body">• Save deliverable summaries</text>
+  <text x="920" y="570" class="body">• Sync chat messages</text>
+
+  <text x="1280" y="320" text-anchor="middle" class="cap">INTERFACES</text>
+  <text x="1280" y="345" text-anchor="middle" class="smallcap">Dashboards + Reporting</text>
+  <text x="1195" y="390" class="body">• Company dashboard</text>
+  <text x="1195" y="420" class="body">• Client dashboard</text>
+  <text x="1195" y="450" class="body">• Manage projects table</text>
+  <text x="1195" y="480" class="body">• Timeline tracker</text>
+  <text x="1195" y="510" class="body">• Ticket management</text>
+  <text x="1195" y="540" class="body">• Real-time chat window</text>
+  <text x="1195" y="570" class="body">• PDF summaries / receipts</text>
+
+  <path d="M280 410H323" stroke="#56c7ff" stroke-width="4" marker-end="url(#arrowBlue)"/>
+  <text x="301" y="398" text-anchor="middle" class="tiny">1. request</text>
+
+  <path d="M545 410H588" stroke="#d97dff" stroke-width="4" marker-end="url(#arrowPurple)"/>
+  <text x="566" y="398" text-anchor="middle" class="tiny">2. validated access</text>
+
+  <path d="M830 410H878" stroke="#73ff9c" stroke-width="4" marker-end="url(#arrowGreen)"/>
+  <text x="854" y="398" text-anchor="middle" class="tiny">3. store / retrieve</text>
+
+  <path d="M1110 410H1158" stroke="#ffc44d" stroke-width="4" marker-end="url(#arrowGold)"/>
+  <text x="1134" y="398" text-anchor="middle" class="tiny">4. render output</text>
+
+  <path d="M1280 620V682H1360V760H190V630" stroke="#d97dff" stroke-width="3" stroke-dasharray="10 10" marker-end="url(#arrowPurple)"/>
+  <text x="1380" y="744" class="tiny">Feedback to users</text>
+
+  <g filter="url(#softShadow)">
+    <rect x="420" y="665" width="760" height="125" rx="24" fill="url(#panelDatabase)" stroke="#6dc8ff" stroke-width="2"/>
+    <rect x="1230" y="690" width="250" height="100" rx="24" fill="url(#panelOutput)" stroke="#e08cff" stroke-width="2"/>
+  </g>
+
+  <text x="800" y="702" text-anchor="middle" class="cap">DATABASE LAYER</text>
+  <text x="800" y="726" text-anchor="middle" class="smallcap">Firebase Firestore + Realtime Database</text>
+
+  <rect x="455" y="738" width="165" height="34" rx="17" fill="#183C63" stroke="#66c8ff"/>
+  <text x="537" y="760" text-anchor="middle" class="tiny">companies / clients</text>
+  <rect x="645" y="738" width="165" height="34" rx="17" fill="#214066" stroke="#7dceff"/>
+  <text x="727" y="760" text-anchor="middle" class="tiny">projects / timelines</text>
+  <rect x="835" y="738" width="145" height="34" rx="17" fill="#29365F" stroke="#a7c6ff"/>
+  <text x="907" y="760" text-anchor="middle" class="tiny">tickets</text>
+  <rect x="1005" y="738" width="140" height="34" rx="17" fill="#2D2454" stroke="#d28dff"/>
+  <text x="1075" y="760" text-anchor="middle" class="tiny">messages</text>
+
+  <path d="M715 620V655" stroke="#73ff9c" stroke-width="4" marker-end="url(#arrowGreen)"/>
+  <path d="M1000 620V655" stroke="#ffc44d" stroke-width="4" marker-end="url(#arrowGold)"/>
+
+  <text x="1355" y="722" text-anchor="middle" class="cap">FINAL OUTPUT</text>
+  <text x="1260" y="750" class="body">• Live dashboard updates</text>
+  <text x="1260" y="775" class="body">• Project transparency</text>
+  <text x="1260" y="800" class="body">• Better client-company coordination</text>
+
+  <path d="M1180 727H1218" stroke="#56c7ff" stroke-width="4" marker-end="url(#arrowBlue)"/>
+
+  <g transform="translate(50,820)">
+    <rect x="0" y="0" width="145" height="38" rx="19" fill="#11365A" stroke="#5cc9ff"/>
+    <rect x="155" y="0" width="145" height="38" rx="19" fill="#341A58" stroke="#d284ff"/>
+    <rect x="310" y="0" width="145" height="38" rx="19" fill="#1E5948" stroke="#78ffab"/>
+    <rect x="465" y="0" width="145" height="38" rx="19" fill="#7A531F" stroke="#ffc65f"/>
+    <rect x="620" y="0" width="145" height="38" rx="19" fill="#0F4F60" stroke="#6ceeff"/>
+    <rect x="775" y="0" width="145" height="38" rx="19" fill="#18576A" stroke="#81f6ff"/>
+    <rect x="930" y="0" width="145" height="38" rx="19" fill="#3C276A" stroke="#da8bff"/>
+    <rect x="1085" y="0" width="145" height="38" rx="19" fill="#1A5F43" stroke="#83ffb3"/>
+    <rect x="1240" y="0" width="170" height="38" rx="19" fill="#103D67" stroke="#6ecfff"/>
+
+    <text x="72" y="24" text-anchor="middle" class="step">1. Sign up / login</text>
+    <text x="227" y="24" text-anchor="middle" class="step">2. Identify role</text>
+    <text x="382" y="24" text-anchor="middle" class="step">3. Load dashboard</text>
+    <text x="537" y="24" text-anchor="middle" class="step">4. Perform action</text>
+    <text x="692" y="24" text-anchor="middle" class="step">5. Validate auth</text>
+    <text x="847" y="24" text-anchor="middle" class="step">6. Store / retrieve</text>
+    <text x="1002" y="24" text-anchor="middle" class="step">7. Sync messages</text>
+    <text x="1157" y="24" text-anchor="middle" class="step">8. Update workflows</text>
+    <text x="1325" y="24" text-anchor="middle" class="step">9. Show reports &amp; status</text>
+  </g>
+</svg>
